@@ -78,7 +78,7 @@ const BookingWizard: React.FC = () => {
   return (
     <form
       onSubmit={handleSubmit}
-      className="max-w-xl mx-auto bg-gray-800 p-6 rounded-lg shadow-lg space-y-4"
+      className="max-w-xl mx-auto bg-white text-gray-800 p-6 rounded-lg shadow-lg space-y-4"
     >
       {/* عنوان النموذج */}
       <h2 className="text-2xl font-bold text-center text-white mb-4">
