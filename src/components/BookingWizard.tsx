@@ -55,7 +55,8 @@ const BookingWizard: React.FC = () => {
             email,
             phone,
             equipment,
-            booking_date: date,
+            rental_start_at: date,
+            expected_return_at: date,
             status: "PENDING_PAYMENT_REVIEW",
           },
         ])
@@ -97,7 +98,7 @@ const BookingWizard: React.FC = () => {
       <div className="grid md:grid-cols-2 gap-4">
         {/* الاسم */}
         <div>
-          <label className="block text-gray-300 mb-1">الاسم الكامل</label>
+          <label className="block text-gray-800 mb-1">الاسم الكامل</label>
           <input
             type="text"
             value={name}
@@ -110,7 +111,7 @@ const BookingWizard: React.FC = () => {
 
         {/* البريد الإلكتروني */}
         <div>
-          <label className="block text-gray-300 mb-1">البريد الإلكتروني</label>
+          <label className="block text-gray-800 mb-1">البريد الإلكتروني</label>
           <input
             type="email"
             value={email}
@@ -123,7 +124,7 @@ const BookingWizard: React.FC = () => {
 
         {/* رقم الهاتف */}
         <div className="md:col-span-2">
-          <label className="block text-gray-300 mb-1">رقم الهاتف</label>
+          <label className="block text-gray-800 mb-1">رقم الهاتف</label>
           <input
             type="tel"
             value={phone}
@@ -136,7 +137,7 @@ const BookingWizard: React.FC = () => {
 
         {/* اختيار المعدات */}
         <div className="md:col-span-2">
-          <label className="block text-gray-300 mb-1">المعدات المطلوبة</label>
+          <label className="block text-gray-800 mb-1">المعدات المطلوبة</label>
           <select
             value={equipment}
             onChange={(e) => setEquipment(e.target.value)}
@@ -154,7 +155,7 @@ const BookingWizard: React.FC = () => {
 
         {/* تاريخ الحجز */}
         <div className="md:col-span-2">
-          <label className="block text-gray-300 mb-1">تاريخ الحجز</label>
+          <label className="block text-gray-800 mb-1">تاريخ الحجز</label>
           <input
             type="date"
             value={date}
