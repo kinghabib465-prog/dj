@@ -35,7 +35,7 @@ export default async function handler(req: Request) {
   if (!Array.isArray(payload.items) || payload.items.length === 0) {
     return new Response(JSON.stringify({ error: "NO_EQUIPMENT_SELECTED" }), {
       status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   }
 
@@ -50,7 +50,7 @@ export default async function handler(req: Request) {
     if (error.message.includes("INSUFFICIENT_AVAILABILITY")) errMsg = "INSUFFICIENT_AVAILABILITY";
     return new Response(JSON.stringify({ error: errMsg }), {
       status: 400,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   }
 
@@ -59,9 +59,11 @@ export default async function handler(req: Request) {
 
   return new Response(JSON.stringify({ bookingNumber: result.booking_number, status: result.status }), {
     status: 200,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
   });
 }
 
 Deno.serve(handler);
+
+
 

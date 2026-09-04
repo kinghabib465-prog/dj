@@ -17,13 +17,13 @@ async function handler(req: Request) {
   if (url.searchParams.get("debug") === "true") {
     return new Response(JSON.stringify({ debug: "handler entered", method: req.method }), {
       status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   }
   if (req.method === "OPTIONS") {
 
     return new Response(null, {
-      headers: corsHeaders,
+      headers: getCorsHeaders(req),
     });
   }
 
@@ -32,7 +32,7 @@ async function handler(req: Request) {
       "Method not allowed",
       {
         status: 405,
-        headers: corsHeaders,
+        headers: getCorsHeaders(req),
       }
     );
   }
@@ -51,7 +51,7 @@ async function handler(req: Request) {
       console.error("Missing SUPABASE_ANON_KEY");
       return new Response(JSON.stringify({ error: "MISSING_ANON_KEY" }), {
         status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       });
     }
     supabase = createClient(supabaseUrl, anonKey, {
@@ -70,7 +70,7 @@ async function handler(req: Request) {
     console.error('Failed to create supabase client:', e);
     return new Response(JSON.stringify({ error: "SUPABASE_CLIENT_ERROR", message: e?.message }), {
       status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
   }
 
@@ -84,7 +84,7 @@ async function handler(req: Request) {
         {
           status: 400,
           headers: {
-            ...corsHeaders,
+            ...getCorsHeaders(req),
             "Content-Type": "application/json",
           },
         }
@@ -104,7 +104,7 @@ async function handler(req: Request) {
         {
           status: 400,
           headers: {
-            ...corsHeaders,
+            ...getCorsHeaders(req),
             "Content-Type": "application/json",
           },
         }
@@ -125,7 +125,7 @@ async function handler(req: Request) {
         {
           status: 400,
           headers: {
-            ...corsHeaders,
+            ...getCorsHeaders(req),
             "Content-Type": "application/json",
           },
         }
@@ -162,7 +162,7 @@ async function handler(req: Request) {
         {
           status: 500,
           headers: {
-            ...corsHeaders,
+            ...getCorsHeaders(req),
             "Content-Type": "application/json",
           },
         }
@@ -184,7 +184,7 @@ async function handler(req: Request) {
       {
         status: 200,
         headers: {
-          ...corsHeaders,
+          ...getCorsHeaders(req),
           "Content-Type": "application/json",
         },
       }
@@ -196,7 +196,7 @@ async function handler(req: Request) {
       {
         status: 500,
         headers: {
-          ...corsHeaders,
+          ...getCorsHeaders(req),
           "Content-Type": "application/json",
         },
       }
@@ -205,3 +205,4 @@ async function handler(req: Request) {
 }
 
 Deno.serve(handler);
+

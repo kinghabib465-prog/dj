@@ -7,10 +7,13 @@ const ProtectedAdminRoute: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Initial session check
-    const { data: { session } } = supabase.auth.getSession();
-    setSession(session);
-    setLoading(false);
+    // Initial session check (async)
+    const checkSession = async () => {
+      const { data, error } = await supabase.auth.getSession();
+      setSession(data?.session ?? null);
+      setLoading(false);
+    };
+    checkSession();
 
     // Listen for auth changes
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {

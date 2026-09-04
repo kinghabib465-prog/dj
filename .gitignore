@@ -18,3 +18,5 @@ supabase/.env
 .env.local
 .env.*
 .supabase-api-keys.tmp.json
+.vercel
+.env*
