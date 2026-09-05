@@ -142,6 +142,12 @@ export default function NewBookingWizard(){
       );
     }
     if (step === 4) {
+      const days = sd && ed ? Math.max(0, Math.ceil((new Date(ed).getTime() - new Date(sd).getTime()) / (1000 * 60 * 60 * 24)) + 1) : 0;
+      const totalPrice = Object.entries(sel).reduce((sum, [id, q]) => {
+        const eq = eqs.find(e => e.id === id);
+        if (!eq) return sum;
+        return sum + q * eq.rental_price * days;
+      }, 0);
       return (
         <div>
           <h3 className="text-xl font-semibold mb-2">مراجعة الطلب</h3>
@@ -160,6 +166,7 @@ export default function NewBookingWizard(){
                 );
               })}
             </ul>
+            <p><strong>الإجمالي:</strong> {totalPrice.toLocaleString()} دج</p>
           </div>
           <button onClick={submit} disabled={load}>
             {load ? "جاري الإرسال…" : "إرسال طلب الحجز"}
