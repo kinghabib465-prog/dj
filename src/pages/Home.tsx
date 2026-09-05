@@ -13,23 +13,23 @@ const Home: React.FC = () => {
         <div className="container mx-auto flex flex-col-reverse md:flex-row items-center gap-8">
           <div className="md:w-1/2 text-center md:text-right">
             <h1 className="text-5xl font-bold mb-4">
-              ط¬ظ‡ظ‘ط² ظ…ظ†ط§ط³ط¨طھظƒ ط¨ظƒظ„ ط³ظ‡ظˆظ„ط©
+              تأجير تجهيزات الأعراس والمناسبات
             </h1>
             <p className="text-lg mb-6">
-              ط§ط®طھط± ظ…ط¹ط¯ط§طھظƒطŒ ط­ط¯ظ‘ط¯ طھط§ط±ظٹط® ط§ظ„ظ…ظ†ط§ط³ط¨ط©طŒ ظˆط£ط±ط³ظ„ ط·ظ„ط¨ ط§ظ„ط­ط¬ط² ظپظٹ ط¯ظ‚ط§ط¦ظ‚.
+              نوفر لك جميع المعدات اللازمة لحفلاتك ومناسباتك بأعلى جودة وبأسعار مناسبة.
             </p>
             <div className="flex flex-col sm:flex-row justify-center md:justify-end gap-4">
               <Link
                 to="/booking"
                 className="bg-accent text-gray-900 px-6 py-3 rounded-full font-semibold hover:bg-accent/90"
               >
-                ط§ط¨ط¯ط£ ط§ظ„ط­ط¬ط²
+                حجز الآن
               </Link>
               <Link
                 to="/equipment"
                 className="bg-gray-700 hover:bg-gray-600 px-6 py-3 rounded-full font-semibold"
               >
-                ط§ط³طھط¹ط±ط¶ ط§ظ„ظ…ط¹ط¯ط§طھ
+                استعراض المعدات
               </Link>
             </div>
             <div className="md:w-1/2 flex justify-center">
@@ -46,19 +46,19 @@ const Home: React.FC = () => {
       <section className="flex flex-col md:flex-row justify-center items-center gap-6 py-8 bg-gray-800">
         <div className="flex items-center space-x-2">
           <CheckCircle2 className="text-success" size={24} />
-          <span>ط­ط¬ط² ط³ط±ظٹط¹</span>
+          <span>مراجعة الطلب</span>
         </div>
         <div className="flex items-center space-x-2">
           <div className="w-6 h-6 bg-accent rounded-full"></div>
-          <span>ظ…ط¹ط¯ط§طھ ظ…طھظ†ظˆط¹ط©</span>
+          <span>متاح اليوم</span>
         </div>
         <div className="flex items-center space-x-2">
           <Tag className="text-warning" size={24} />
-          <span>ط£ط³ط¹ط§ط± ظˆط§ط¶ط­ط©</span>
+          <span>التاريخ</span>
         </div>
         <div className="flex items-center space-x-2">
           <Clock className="text-info" size={24} />
-          <span>طھط£ظƒظٹط¯ ط¨ط¹ط¯ ظ…ط±ط§ط¬ط¹ط© ط§ظ„ط¯ظپط¹</span>
+          <span>الدفعة</span>
         </div>
       </section>
 
