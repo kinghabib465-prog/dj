@@ -1,14 +1,13 @@
 import React,{useState,useEffect}from"react";
 import{supabase}from"../lib/supabase";
-import{X,Upload}from"lucide-react";
+import{X,Upload,User,Phone}from"lucide-react";
 import RentalCalendar from"./RentalCalendar";
 
 type Eq={id:string;name:string;image_path:string|null;rental_price:number;total_quantity:number};
 export default function NewBookingWizard(){
   const[step,setStep]=useState(0);
-  const[fn,setFn]=useState("");
-  const[ln,setLn]=useState("");
-  const[ph,setPh]=useState("");
+  const[fullName,setFullName]=useState("");
+  const[phone,setPhone]=useState("");
   const[sd,setSd]=useState("");
   const[ed,setEd]=useState("");
   const[eqs,setEqs]=useState<Eq[]>([]);
@@ -24,7 +23,45 @@ export default function NewBookingWizard(){
   const toggle=id=>setSel(p=>{const c={...p};if(c[id])delete c[id];else if((inv[id]||0)>0)c[id]=1;return c});
   const qty=(id,delta)=>setSel(p=>{const cur=p[id]||0;const a=inv[id]||0;const n=cur+delta;if(n<1||n>a)return p;return{...p,[id]:n}});
   const fileChange=e=>{const f=e.target.files?.[0];if(!f)return;setRec(f);supabase.functions.invoke("create-receipt-upload",{body:{fileName:f.name,fileType:f.type}}).then(r=>{if(r.error)throw r.error;const{signedUrl,path}=r.data as any;fetch(signedUrl,{method:"PUT",headers:{"Content-Type":f.type},body:f});setRecPath(path)})};
-  const submit=async()=>{if(!fn||!ln||!ph||!sd||!ed||!recPath){setErr("املأ جميع الحقول");return}setLoad(true);setErr(null);try{const items=Object.entries(sel).map(([id,q])=>({equipmentId:id,quantity:q}));await supabase.functions.invoke("create-public-booking",{body:{customerName:`${fn} ${ln}`,customerPhone:ph,rentalStartAt:sd,expectedReturnAt:ed,receiptObjectPath:recPath,notes:"",items}});setOk("تم إرسال طلب الحجز بنجاح");setFn("");setLn("");setPh("");setSd("");setEd("");setSel({});setRec(null);setRecPath("");setStep(0)}catch(e:any){setErr(e.message||"خطأ")}finally{setLoad(false)}};
+  const submit = async () => {
+    if (!fullName || !phone || !sd || !ed || !recPath) {
+      setErr("املأ جميع الحقول");
+      return;
+    }
+    setLoad(true);
+    setErr(null);
+    try {
+      const items = Object.entries(sel).map(([id, q]) => ({
+        equipmentId: id,
+        quantity: q,
+      }));
+      await supabase.functions.invoke("create-public-booking", {
+        body: {
+          customerName: fullName,
+          customerPhone: phone,
+          rentalStartAt: sd,
+          expectedReturnAt: ed,
+          receiptObjectPath: recPath,
+          notes: "",
+          items,
+        },
+      });
+      setOk("تم إرسال طلب الحجز بنجاح");
+      // reset
+      setFullName("");
+      setPhone("");
+      setSd(null);
+      setEd(null);
+      setSel({});
+      setRec(null);
+      setRecPath("");
+      setStep(0);
+    } catch (e: any) {
+      setErr(e.message || "خطأ");
+    } finally {
+      setLoad(false);
+    }
+  };
   const renderStep = () => {
     if (step === 0) {
       return <RentalCalendar startDate={sd} endDate={ed} setStartDate={setSd} setEndDate={setEd} />;
@@ -60,17 +97,31 @@ export default function NewBookingWizard(){
     if (step === 2) {
       return (
         <div className="grid md:grid-cols-2 gap-2">
-          <div>
-            <label>الاسم</label>
-            <input type="text" value={fn} onChange={e => setFn(e.target.value)} />
-            <div>
-              <label>اللقب</label>
-              <input type="text" value={ln} onChange={e => setLn(e.target.value)} />
-            </div>
-            <div className="md:col-span-2">
-              <label>رقم الهاتف</label>
-              <input type="tel" value={ph} onChange={e => setPh(e.target.value)} />
-            </div>
+          <div className="col-span-2">
+            <label className="block mb-1">
+              <User className="inline-block mr-2" />
+              الاسم واللقب
+            </label>
+            <input
+              type="text"
+              placeholder="مثال: محمد بن علي"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              className="w-full p-2 border rounded"
+            />
+          </div>
+          <div className="col-span-2">
+            <label className="block mb-1">
+              <Phone className="inline-block mr-2" />
+              رقم الهاتف
+            </label>
+            <input
+              type="tel"
+              placeholder="مثال: 0550123456"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              className="w-full p-2 border rounded"
+            />
           </div>
         </div>
       );
@@ -93,10 +144,10 @@ export default function NewBookingWizard(){
     if (step === 4) {
       return (
         <div>
-          <h3>مراجعة الطلب</h3>
+          <h3 className="text-xl font-semibold mb-2">مراجعة الطلب</h3>
           <div>
-            <p>من {sd} إلى {ed}</p>
-            <p>{fn} {ln}</p>
+            <p><strong>التاريخ:</strong> {sd} إلى {ed}</p>
+            <p><strong>الاسم:</strong> {fullName}</p>
             <p>{ph}</p>
             <p>المعدات:</p>
             <ul>
@@ -111,7 +162,7 @@ export default function NewBookingWizard(){
             </ul>
           </div>
           <button onClick={submit} disabled={load}>
-            {load ? "جاري الإرسال…" : "إرسال"}
+            {load ? "جاري الإرسال…" : "إرسال طلب الحجز"}
           </button>
         </div>
       );
@@ -120,7 +171,7 @@ export default function NewBookingWizard(){
   };
 
   return (
-    <div className="max-w-3xl mx-auto bg-gray-900 p-4 rounded">
+    <div dir="rtl" className="max-w-3xl mx-auto bg-white p-6 rounded-lg shadow-lg space-y-4">
       <div>
         {err && <p>{err}</p>}
         {ok && <p>{ok}</p>}
