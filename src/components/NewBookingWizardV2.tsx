@@ -8,8 +8,9 @@ export default function NewBookingWizard(){
   const[step,setStep]=useState(0);
   const[fullName,setFullName]=useState("");
   const[phone,setPhone]=useState("");
-  const[sd,setSd]=useState("");
-  const[ed,setEd]=useState("");
+  const[notes,setNotes]=useState("");
+  const[sd,setSd]=useState<string | null>(null);
+  const[ed,setEd]=useState<string | null>(null);
   const[eqs,setEqs]=useState<Eq[]>([]);
   const[sel,setSel]=useState<Record<string,number>>({});
   const[rec,setRec]=useState<File|null>(null);
@@ -24,25 +25,34 @@ export default function NewBookingWizard(){
   const qty=(id,delta)=>setSel(p=>{const cur=p[id]||0;const a=inv[id]||0;const n=cur+delta;if(n<1||n>a)return p;return{...p,[id]:n}});
   const fileChange=e=>{const f=e.target.files?.[0];if(!f)return;setRec(f);supabase.functions.invoke("create-receipt-upload",{body:{fileName:f.name,fileType:f.type}}).then(r=>{if(r.error)throw r.error;const{signedUrl,path}=r.data as any;fetch(signedUrl,{method:"PUT",headers:{"Content-Type":f.type},body:f});setRecPath(path)})};
   const submit = async () => {
-    if (!fullName || !phone || !sd || !ed || !recPath) {
-      setErr("املأ جميع الحقول");
-      return;
-    }
-    setLoad(true);
-    setErr(null);
-    try {
+     const trimmedName = fullName.trim();
+     const trimmedPhone = phone.trim();
+     if (!trimmedName || !trimmedPhone || !sd || !ed || !recPath) {
+       setErr("املأ جميع الحقول");
+       return;
+     }
+     if (!/^[0-9]{7,15}$/ .test(trimmedPhone)) {
+       setErr("رقم الهاتف غير صالح");
+       return;
+     }
+       setLoad(true);
+       setErr(null);
+       try {
       const items = Object.entries(sel).map(([id, q]) => ({
         equipmentId: id,
         quantity: q,
       }));
       await supabase.functions.invoke("create-public-booking", {
         body: {
-          customerName: fullName,
-          customerPhone: phone,
+          customerName: trimmedName,
+          customerPhone: trimmedPhone,
           rentalStartAt: sd,
           expectedReturnAt: ed,
           receiptObjectPath: recPath,
+           // notes: "",
           notes: "",
+           notes: notes,
+          // notes: notes,
           items,
         },
       });
@@ -50,6 +60,7 @@ export default function NewBookingWizard(){
       // reset
       setFullName("");
       setPhone("");
+       setNotes("");
       setSd(null);
       setEd(null);
       setSel({});
@@ -71,6 +82,7 @@ export default function NewBookingWizard(){
             <button
               onClick={() => setStep(step + 1)}
               className="bg-accent text-white py-2 px-4 rounded hover:bg-accent"
+               disabled={!sd || !ed}
             >
               التالي
             </button>
@@ -152,6 +164,19 @@ export default function NewBookingWizard(){
                 onChange={(e) => setPhone(e.target.value)}
                 className="w-full p-2 border rounded"
               />
+              <div className="col-span-2">
+                <label className="block mb-1">
+                  <User className="inline-block mr-2" />
+                  ملاحظات (اختياري)
+                </label>
+                <textarea
+                  placeholder="اكتب أي ملاحظات إضافية"
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="w-full p-2 border rounded"
+                  rows={3}
+                />
+              </div>
             </div>
           </div>
           <div className="flex justify-between mt-4">
@@ -205,7 +230,9 @@ export default function NewBookingWizard(){
       );
     }
     if (step === 4) {
-      const days = sd && ed ? Math.max(0, Math.ceil((new Date(ed).getTime() - new Date(sd).getTime()) / (1000 * 60 * 60 * 24)) + 1) : 0;
+      const startDate = sd ? new Date(sd).toLocaleDateString('ar-EG') : '';
+  const endDate = ed ? new Date(ed).toLocaleDateString('ar-EG') : '';
+  const days = sd && ed ? Math.max(0, Math.ceil((new Date(ed).getTime() - new Date(sd).getTime()) / (1000 * 60 * 60 * 24)) + 1) : 0;
       const totalPrice = Object.entries(sel).reduce((sum, [id, q]) => {
         const eq = eqs.find(e => e.id === id);
         if (!eq) return sum;
@@ -215,9 +242,10 @@ export default function NewBookingWizard(){
         <div>
           <h3 className="text-xl font-semibold mb-2">مراجعة الطلب</h3>
           <div>
-            <p><strong>التاريخ:</strong> {sd} إلى {ed}</p>
+            <p><strong>التاريخ:</strong> {startDate} إلى {endDate}</p>
             <p><strong>الاسم:</strong> {fullName}</p>
             <p><strong>رقم الهاتف:</strong> {phone}</p>
+              {notes && <p><strong>ملاحظات:</strong> {notes}</p>}
             <p>المعدات:</p>
             <ul>
               {Object.entries(sel).map(([id, q]) => {
@@ -229,7 +257,7 @@ export default function NewBookingWizard(){
                 );
               })}
             </ul>
-            <p><strong>الإجمالي:</strong> {totalPrice.toLocaleString()} دج</p>
+            <p><strong>الإجمالي:</strong> {totalPrice.toLocaleString('ar-EG')} دج</p>
           </div>
           <div className="flex justify-between mt-4">
             <button
