@@ -1,5 +1,5 @@
 import React from "react";
-import BookingWizard from "../components/BookingWizard";
+import BookingWizard from "../components/NewBookingWizardV2";
 import Layout from "../components/Layout";
 
 const Booking: React.FC = () => {

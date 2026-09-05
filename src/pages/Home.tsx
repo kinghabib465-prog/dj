@@ -1,9 +1,9 @@
-﻿import React from "react";
+import React from "react";
 import { Link } from "react-router-dom";
 import Layout from "../components/Layout";
 import EquipmentPreview from "../components/EquipmentPreview";
 import HowItWorks from "../components/HowItWorks";
-import { CheckCircle2, Package, Tag, Clock } from "lucide-react";
+import { CheckCircle2, Tag, Clock } from "lucide-react";
 
 const Home: React.FC = () => {
   return (
@@ -12,13 +12,23 @@ const Home: React.FC = () => {
       <section className="bg-gray-800 text-white py-20">
         <div className="container mx-auto flex flex-col-reverse md:flex-row items-center gap-8">
           <div className="md:w-1/2 text-center md:text-right">
-            <h1 className="text-5xl font-bold mb-4">ط¬ظ‡ظ‘ط² ظ…ظ†ط§ط³ط¨طھظƒ ط¨ظƒظ„ ط³ظ‡ظˆظ„ط©</h1>
-            <p className="text-lg mb-6">ط§ط®طھط± ظ…ط¹ط¯ط§طھظƒطŒ ط­ط¯ظ‘ط¯ طھط§ط±ظٹط® ط§ظ„ظ…ظ†ط§ط³ط¨ط©طŒ ظˆط£ط±ط³ظ„ ط·ظ„ط¨ ط§ظ„ط­ط¬ط² ظپظٹ ط¯ظ‚ط§ط¦ظ‚.</p>
+            <h1 className="text-5xl font-bold mb-4">
+              ط¬ظ‡ظ‘ط² ظ…ظ†ط§ط³ط¨طھظƒ ط¨ظƒظ„ ط³ظ‡ظˆظ„ط©
+            </h1>
+            <p className="text-lg mb-6">
+              ط§ط®طھط± ظ…ط¹ط¯ط§طھظƒطŒ ط­ط¯ظ‘ط¯ طھط§ط±ظٹط® ط§ظ„ظ…ظ†ط§ط³ط¨ط©طŒ ظˆط£ط±ط³ظ„ ط·ظ„ط¨ ط§ظ„ط­ط¬ط² ظپظٹ ط¯ظ‚ط§ط¦ظ‚.
+            </p>
             <div className="flex flex-col sm:flex-row justify-center md:justify-end gap-4">
-              <Link to="/booking" className="bg-accent text-gray-900 px-6 py-3 rounded-full font-semibold hover:bg-accent/90">
+              <Link
+                to="/booking"
+                className="bg-accent text-gray-900 px-6 py-3 rounded-full font-semibold hover:bg-accent/90"
+              >
                 ط§ط¨ط¯ط£ ط§ظ„ط­ط¬ط²
               </Link>
-              <Link to="/equipment" className="bg-gray-700 hover:bg-gray-600 px-6 py-3 rounded-full font-semibold">
+              <Link
+                to="/equipment"
+                className="bg-gray-700 hover:bg-gray-600 px-6 py-3 rounded-full font-semibold"
+              >
                 ط§ط³طھط¹ط±ط¶ ط§ظ„ظ…ط¹ط¯ط§طھ
               </Link>
             </div>
@@ -28,9 +38,11 @@ const Home: React.FC = () => {
                 <div className="w-12 h-12 bg-accent rounded-full"></div>
               </div>
             </div>
-
-      {/* Trust / Feature indicators */}
+          </div>
         </div>
+      </section>
+
+      {/* Feature indicators */}
       <section className="flex flex-col md:flex-row justify-center items-center gap-6 py-8 bg-gray-800">
         <div className="flex items-center space-x-2">
           <CheckCircle2 className="text-success" size={24} />
@@ -60,9 +72,3 @@ const Home: React.FC = () => {
 };
 
 export default Home;
-
-
-
-
-
-
