@@ -64,79 +64,142 @@ export default function NewBookingWizard(){
   };
   const renderStep = () => {
     if (step === 0) {
-      return <RentalCalendar startDate={sd} endDate={ed} setStartDate={setSd} setEndDate={setEd} />;
+      return (
+        <div>
+          <RentalCalendar startDate={sd} endDate={ed} setStartDate={setSd} setEndDate={setEd} />
+          <div className="flex justify-end mt-4">
+            <button
+              onClick={() => setStep(step + 1)}
+              className="bg-accent text-white py-2 px-4 rounded hover:bg-accent"
+            >
+              التالي
+            </button>
+          </div>
+        </div>
+      );
     }
     if (step === 1) {
       return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-          {eqs.map(eq => {
-            const av = inv[eq.id] || eq.total_quantity;
-            const selc = !!sel[eq.id];
-            return (
-              <div key={eq.id} className={`border p-1 ${selc ? "border-accent" : "border-gray-600"} flex flex-col items-center`}>
-                <img src={eq.image_path || ""} alt={eq.name} className="w-full h-20 object-cover mb-1" />
-                <p>{eq.name}</p>
-                <p>{eq.rental_price.toLocaleString()} دج</p>
-                <p>متوفر:{av}</p>
-                {selc ? (
-                  <div className="flex items-center space-x-1">
-                    <button onClick={() => qty(eq.id, -1)}>-</button>
-                    <span>{sel[eq.id]}</span>
-                    <button onClick={() => qty(eq.id, 1)}>+</button>
-                    <button onClick={() => toggle(eq.id)}><X size={16} /></button>
-                  </div>
-                ) : (
-                  <button onClick={() => toggle(eq.id)}>اختر</button>
-                )}
-              </div>
-            );
-          })}
+        <div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+            {eqs.map(eq => {
+              const av = inv[eq.id] || eq.total_quantity;
+              const selc = !!sel[eq.id];
+              return (
+                <div key={eq.id} className={`border p-1 ${selc ? "border-accent" : "border-gray-600"} flex flex-col items-center`}>
+                  <img src={eq.image_path || ""} alt={eq.name} className="w-full h-20 object-cover mb-1" />
+                  <p>{eq.name}</p>
+                  <p>{eq.rental_price.toLocaleString()} دج</p>
+                  <p>متوفر:{av}</p>
+                  {selc ? (
+                    <div className="flex items-center space-x-1">
+                      <button onClick={() => qty(eq.id, -1)}>-</button>
+                      <span>{sel[eq.id]}</span>
+                      <button onClick={() => qty(eq.id, 1)}>+</button>
+                      <button onClick={() => toggle(eq.id)}><X size={16} /></button>
+                    </div>
+                  ) : (
+                    <button onClick={() => toggle(eq.id)}>اختر</button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <div className="flex justify-between mt-4">
+            <button
+              onClick={() => setStep(step - 1)}
+              className="bg-gray-300 text-black py-2 px-4 rounded hover:bg-gray-400"
+            >
+              السابق
+            </button>
+            <button
+              onClick={() => setStep(step + 1)}
+              disabled={Object.keys(sel).length === 0}
+              className="bg-accent text-white py-2 px-4 rounded hover:bg-accent"
+            >
+              التالي
+            </button>
+          </div>
         </div>
       );
     }
     if (step === 2) {
       return (
-        <div className="grid md:grid-cols-2 gap-2">
-          <div className="col-span-2">
-            <label className="block mb-1">
-              <User className="inline-block mr-2" />
-              الاسم واللقب
-            </label>
-            <input
-              type="text"
-              placeholder="مثال: محمد بن علي"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              className="w-full p-2 border rounded"
-            />
+        <div>
+          <div className="grid md:grid-cols-2 gap-2">
+            <div className="col-span-2">
+              <label className="block mb-1">
+                <User className="inline-block mr-2" />
+                الاسم واللقب
+              </label>
+              <input
+                type="text"
+                placeholder="مثال: محمد بن علي"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                className="w-full p-2 border rounded"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="block mb-1">
+                <Phone className="inline-block mr-2" />
+                رقم الهاتف
+              </label>
+              <input
+                type="tel"
+                placeholder="مثال: 0550123456"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full p-2 border rounded"
+              />
+            </div>
           </div>
-          <div className="col-span-2">
-            <label className="block mb-1">
-              <Phone className="inline-block mr-2" />
-              رقم الهاتف
-            </label>
-            <input
-              type="tel"
-              placeholder="مثال: 0550123456"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="w-full p-2 border rounded"
-            />
+          <div className="flex justify-between mt-4">
+            <button
+              onClick={() => setStep(step - 1)}
+              className="bg-gray-300 text-black py-2 px-4 rounded hover:bg-gray-400"
+            >
+              السابق
+            </button>
+            <button
+              onClick={() => setStep(step + 1)}
+              disabled={!fullName || !phone}
+              className="bg-accent text-white py-2 px-4 rounded hover:bg-accent"
+            >
+              التالي
+            </button>
           </div>
         </div>
       );
     }
     if (step === 3) {
       return (
-        <div className="flex flex-col items-center">
-          <label>ارفع وصل الدفع</label>
-          <div className="border-dashed border-gray-600 p-4 rounded">
-            <input type="file" accept="image/*" onChange={fileChange} className="hidden" id="rec" />
-            <label htmlFor="rec" className="flex flex-col items-center">
-              <Upload className="text-accent" size={48} />
-              <span>انقر لتحميل صورة الفاتورة</span>
-              {rec && <span>{rec.name}</span>}
-            </label>
+        <div>
+          <div className="flex flex-col items-center">
+            <label>ارفع وصل الدفع</label>
+            <div className="border-dashed border-gray-600 p-4 rounded">
+              <input type="file" accept="image/*" onChange={fileChange} className="hidden" id="rec" />
+              <label htmlFor="rec" className="flex flex-col items-center">
+                <Upload className="text-accent" size={48} />
+                <span>انقر لتحميل صورة الفاتورة</span>
+                {rec && <span>{rec.name}</span>}
+              </label>
+            </div>
+          </div>
+          <div className="flex justify-between mt-4">
+            <button
+              onClick={() => setStep(step - 1)}
+              className="bg-gray-300 text-black py-2 px-4 rounded hover:bg-gray-400"
+            >
+              السابق
+            </button>
+            <button
+              onClick={() => setStep(step + 1)}
+              disabled={!recPath}
+              className="bg-accent text-white py-2 px-4 rounded hover:bg-accent"
+            >
+              التالي
+            </button>
           </div>
         </div>
       );
@@ -154,7 +217,7 @@ export default function NewBookingWizard(){
           <div>
             <p><strong>التاريخ:</strong> {sd} إلى {ed}</p>
             <p><strong>الاسم:</strong> {fullName}</p>
-            <p>{ph}</p>
+            <p><strong>رقم الهاتف:</strong> {phone}</p>
             <p>المعدات:</p>
             <ul>
               {Object.entries(sel).map(([id, q]) => {
@@ -168,9 +231,21 @@ export default function NewBookingWizard(){
             </ul>
             <p><strong>الإجمالي:</strong> {totalPrice.toLocaleString()} دج</p>
           </div>
-          <button onClick={submit} disabled={load}>
-            {load ? "جاري الإرسال…" : "إرسال طلب الحجز"}
-          </button>
+          <div className="flex justify-between mt-4">
+            <button
+              onClick={() => setStep(step - 1)}
+              className="bg-gray-300 text-black py-2 px-4 rounded hover:bg-gray-400"
+            >
+              السابق
+            </button>
+            <button
+              onClick={submit}
+              disabled={load}
+              className="bg-accent text-white py-2 px-4 rounded hover:bg-accent"
+            >
+              {load ? "جاري الإرسال…" : "إرسال طلب الحجز"}
+            </button>
+          </div>
         </div>
       );
     }
