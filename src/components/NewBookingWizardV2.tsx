@@ -4,7 +4,7 @@ import{X,Upload,User,Phone,Calendar}from"lucide-react";
 import RentalCalendar from"./RentalCalendar";
 
 type Eq={id:string;name:string;image_path:string|null;rental_price:number;total_quantity:number};
-export default function NewBookingWizard(){
+export default function NewBookingWizardV2(){
   const[step,setStep]=useState(0);
   const[fullName,setFullName]=useState("");
   const[phone,setPhone]=useState("");
