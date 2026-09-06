@@ -184,7 +184,7 @@ export default function NewBookingWizardV2(){
                   placeholder="اكتب أي ملاحظات إضافية"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="w-full p-2 border rounded"
+                  className="w-full p-2 border rounded bg-white text-black placeholder-gray-500"
                   rows={3}
                 />
               </div>
@@ -304,6 +304,7 @@ export default function NewBookingWizardV2(){
             placeholder="الاسم واللقب"
             value={fullName}
             onChange={(e) => setFullName(e.target.value)}
+/* name-input */
             className="flex-1 outline-none"
           />
         </div>
@@ -417,6 +418,12 @@ export default function NewBookingWizardV2(){
           {load ? "جاري الإرسال…" : "إرسال طلب الحجز"}
         </button>
       </div>
+    <style jsx>{`
+      input, textarea {
+        background-color: white;
+        color: black;
+      }
+    `}</style>
     </div>
   );
 }
