@@ -1,6 +1,6 @@
 import React,{useState,useEffect}from"react";
 import{supabase}from"../lib/supabase";
-import{X,Upload,User,Phone}from"lucide-react";
+import{X,Upload,User,Phone,Calendar}from"lucide-react";
 import RentalCalendar from"./RentalCalendar";
 
 type Eq={id:string;name:string;image_path:string|null;rental_price:number;total_quantity:number};
@@ -49,10 +49,7 @@ export default function NewBookingWizard(){
           rentalStartAt: sd,
           expectedReturnAt: ed,
           receiptObjectPath: recPath,
-           // notes: "",
-          notes: "",
-           notes: notes,
-          // notes: notes,
+
           items,
         },
       });
@@ -285,7 +282,126 @@ export default function NewBookingWizard(){
       <div>
         {err && <p>{err}</p>}
         {ok && <p>{ok}</p>}
-        {renderStep()}
+        {/* Full name */}
+        <div className="flex items-center border rounded px-3 py-2">
+          <User className="mr-2 text-gray-500" />
+          <input
+            type="text"
+            placeholder="الاسم واللقب"
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            className="flex-1 outline-none"
+          />
+        </div>
+
+        {/* Phone */}
+        <div className="flex items-center border rounded px-3 py-2">
+          <Phone className="mr-2 text-gray-500" />
+          <input
+            type="tel"
+            placeholder="رقم الهاتف"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            className="flex-1 outline-none"
+          />
+        </div>
+
+        {/* Date */}
+        <div className="flex items-center border rounded px-3 py-2">
+          <Calendar className="mr-2 text-gray-500" />
+          <input
+            type="date"
+            min={new Date().toISOString().split("T")[0]}
+            value={sd || ""}
+            onChange={(e) => setSd(e.target.value || null)}
+            className="flex-1 outline-none"
+          />
+        </div>
+
+        {/* Equipment */}
+        <div>
+          <label className="block mb-2 font-medium">المعدات المطلوبة</label>
+          <div className="grid grid-cols-2 gap-3">
+            {eqs.map(eq => {
+              const av = inv[eq.id] || eq.total_quantity;
+              const selected = !!sel[eq.id];
+              const quantity = sel[eq.id] || 0;
+              return (
+                <div
+                  key={eq.id}
+                  className={`border rounded p-3 cursor-pointer ${selected ? "border-accent bg-accent/10" : "border-gray-600"}`}
+                  onClick={() => toggle(eq.id)}
+                >
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">{eq.name}</span>
+                    <span className="text-sm text-gray-600">{eq.rental_price.toLocaleString('ar-EG')} دج</span>
+                  </div>
+                  {selected && av > 1 && (
+                    <div className="flex items-center mt-2 space-x-2">
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); qty(eq.id, -1); }}
+                        className="w-6 h-6 flex items-center justify-center border rounded"
+                      >
+                        -
+                      </button>
+                      <span>{quantity}</span>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); qty(eq.id, 1); }}
+                        className="w-6 h-6 flex items-center justify-center border rounded"
+                      >
+                        +
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Receipt upload */}
+        <div>
+          <label className="block mb-2 font-medium">صورة وصل العربون</label>
+          <div className="border-dashed border-gray-600 p-4 rounded text-center">
+            <input
+              type="file"
+              accept="image/*"
+              onChange={fileChange}
+              className="hidden"
+              id="receipt-upload"
+            />
+            <label htmlFor="receipt-upload" className="cursor-pointer">
+              <Upload className="mx-auto text-accent" size={48} />
+              <span className="block">انقر لتحميل صورة الفاتورة</span>
+            </label>
+            {rec && (
+              <div className="mt-2 flex items-center justify-center space-x-2">
+                <span>{rec.name}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setRec(null);
+                    setRecPath("");
+                  }}
+                  className="text-red-500"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Submit */}
+        <button
+          onClick={submit}
+          disabled={load}
+          className="w-full bg-accent text-white py-2 rounded hover:bg-accent/90 disabled:opacity-50"
+        >
+          {load ? "جاري الإرسال…" : "إرسال طلب الحجز"}
+        </button>
       </div>
     </div>
   );
