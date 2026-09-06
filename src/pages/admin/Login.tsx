@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { User, Lock } from "lucide-react";
+import { supabase } from "../../lib/supabase";
 
 export default function AdminLogin() {
   const [username, setUsername] = useState("");
@@ -16,13 +17,17 @@ export default function AdminLogin() {
     }
     setLoading(true);
     try {
-      // TODO: Replace with real authentication request
-      console.log("تسجيل الدخول كـ", username);
-      await new Promise((r) => setTimeout(r, 500));
-      // Redirect after successful login
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email: username,
+        password,
+      });
+      if (error) {
+        throw error;
+      }
+      // Successful login, redirect to dashboard
       window.location.href = "/admin/dashboard";
-    } catch (e) {
-      setError("فشل تسجيل الدخول");
+    } catch (e: any) {
+      setError(e?.message || "فشل تسجيل الدخول");
     } finally {
       setLoading(false);
     }
@@ -40,7 +45,7 @@ export default function AdminLogin() {
             <User className="mr-2 text-gray-500" />
             <input
               type="text"
-              placeholder="اسم المستخدم"
+              placeholder="البريد الإلكتروني"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               className="flex-1 outline-none bg-transparent"

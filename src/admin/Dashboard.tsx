@@ -1,8 +1,16 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Calendar, Package, Truck, ArrowLeftFromLine, LogOut } from "lucide-react";
+import { supabase } from "../../lib/supabase";
 
 export default function AdminDashboard() {
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate("/admin/login");
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white shadow">
@@ -10,13 +18,13 @@ export default function AdminDashboard() {
           <h1 className="text-2xl font-semibold text-gray-800">
             لوحة تحكم المشرف
           </h1>
-          <Link
-            to="/admin/login"
+          <button
+            onClick={handleLogout}
             className="flex items-center text-gray-600 hover:text-gray-800"
           >
             <LogOut className="mr-1 w-5 h-5" />
             تسجيل الخروج
-          </Link>
+          </button>
         </div>
       </header>
       <main className="max-w-7xl mx-auto p-6">
