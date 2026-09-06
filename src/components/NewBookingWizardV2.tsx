@@ -21,8 +21,22 @@ export default function NewBookingWizardV2(){
   const[inv,setInv]=useState<Record<string,number>>({});
   useEffect(()=>{supabase.from("equipment").select("id,name,image_path,rental_price,total_quantity").eq("is_active",true).then(r=>setEqs(r.data as Eq[]))},[]);
   useEffect(()=>{if(!sd||!ed){setInv({});return}supabase.from("inventory_status").select("equipment_id,total_quantity,outside_quantity").then(r=>{const m:Record<string,number>={};(r.data as any[]).forEach(v=>{m[v.equipment_id]=Math.max(0,v.total_quantity-r.outside_quantity)});setInv(m)});},[sd,ed]);
-  const toggle=id=>setSel(p=>{const c={...p};if(c[id])delete c[id];else if((inv[id]||0)>0)c[id]=1;return c});
-  const qty=(id,delta)=>setSel(p=>{const cur=p[id]||0;const a=inv[id]||0;const n=cur+delta;if(n<1||n>a)return p;return{...p,[id]:n}});
+  const toggle = (id: string) => setSel(p => {
+  const c = { ...p };
+  const eq = eqs.find(e => e.id === id);
+  const available = inv[id] ?? (eq?.total_quantity ?? 0);
+  if (c[id]) delete c[id];
+  else if (available > 0) c[id] = 1;
+  return c;
+});
+  const qty = (id: string, delta: number) => setSel(p => {
+  const cur = p[id] ?? 0;
+  const eq = eqs.find(e => e.id === id);
+  const available = inv[id] ?? (eq?.total_quantity ?? 0);
+  const n = cur + delta;
+  if (n < 1 || n > available) return p;
+  return { ...p, [id]: n };
+});
   const fileChange=e=>{const f=e.target.files?.[0];if(!f)return;setRec(f);supabase.functions.invoke("create-receipt-upload",{body:{fileName:f.name,fileType:f.type}}).then(r=>{if(r.error)throw r.error;const{signedUrl,path}=r.data as any;fetch(signedUrl,{method:"PUT",headers:{"Content-Type":f.type},body:f});setRecPath(path)})};
   const submit = async () => {
      const trimmedName = fullName.trim();
@@ -313,7 +327,7 @@ export default function NewBookingWizardV2(){
             type="date"
             min={new Date().toISOString().split("T")[0]}
             value={sd || ""}
-            onChange={(e) => setSd(e.target.value || null)}
+            onChange={(e) => { const val = e.target.value || null; setSd(val); setEd(val); }}
             className="flex-1 outline-none"
           />
         </div>
