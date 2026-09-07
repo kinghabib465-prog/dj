@@ -35,7 +35,7 @@ const ReturnsDetail: React.FC = () => {
 
   const handleChange = (index: number, field: keyof ReturnItem, value: number) => {
     const newItems = [...items];
-    newItems[index][field] = value;
+    (newItems[index] as any)[field] = value;
     setItems(newItems);
   };
 

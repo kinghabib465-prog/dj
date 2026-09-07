@@ -1,10 +1,3 @@
-import React from "react";
-import { Link } from "react-router-dom";
-
-/**
- * Layout component that provides a consistent header, footer and page background.
- * Uses Tailwind colors defined in tailwind.config.js.
- */
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { Menu, X, Home, Box, Calendar, Phone } from "lucide-react";

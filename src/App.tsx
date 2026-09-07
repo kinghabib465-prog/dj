@@ -5,8 +5,9 @@ import Equipment from "./pages/Equipment";
 import Booking from "./pages/Booking";
 import BookingSuccess from "./pages/BookingSuccess";
 import Contact from "./pages/Contact";
-import AdminLogin from "./admin/Login";
+import AdminLogin from "./pages/admin/Login";
 import AdminDashboard from "./admin/Dashboard";
+import BookingDetail from "./admin/BookingDetail";
 import ReturnsList from "./admin/ReturnsList";
 import ReturnsDetail from "./admin/ReturnsDetail";
 import EquipmentInside from "./admin/EquipmentInside";
@@ -28,6 +29,7 @@ const App: React.FC = () => {
       {/* Protected admin routes */}
       <Route element={<ProtectedAdminRoute />}>
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/admin/booking/:bookingId" element={<BookingDetail />} />
         <Route path="/admin/returns" element={<ReturnsList />} />
         <Route path="/admin/returns/:bookingId" element={<ReturnsDetail />} />
         <Route path="/admin/equipment-inside" element={<EquipmentInside />} />

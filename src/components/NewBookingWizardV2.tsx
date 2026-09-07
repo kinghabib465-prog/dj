@@ -1,14 +1,11 @@
 import React,{useState,useEffect}from"react";
 import{supabase}from"../lib/supabase";
 import{X,Upload,User,Phone,Calendar}from"lucide-react";
-import RentalCalendar from"./RentalCalendar";
 
 type Eq={id:string;name:string;image_path:string|null;rental_price:number;total_quantity:number};
 export default function NewBookingWizardV2(){
-  const[step,setStep]=useState(0);
   const[fullName,setFullName]=useState("");
   const[phone,setPhone]=useState("");
-  const[notes,setNotes]=useState("");
   const[sd,setSd]=useState<string | null>(null);
   const[ed,setEd]=useState<string | null>(null);
   const[eqs,setEqs]=useState<Eq[]>([]);
@@ -20,7 +17,7 @@ export default function NewBookingWizardV2(){
   const[ok,setOk]=useState<string|null>(null);
   const[inv,setInv]=useState<Record<string,number>>({});
   useEffect(()=>{supabase.from("equipment").select("id,name,image_path,rental_price,total_quantity").eq("is_active",true).then(r=>setEqs(r.data as Eq[]))},[]);
-  useEffect(()=>{if(!sd||!ed){setInv({});return}supabase.from("inventory_status").select("equipment_id,total_quantity,outside_quantity").then(r=>{const m:Record<string,number>={};(r.data as any[]).forEach(v=>{m[v.equipment_id]=Math.max(0,v.total_quantity-r.outside_quantity)});setInv(m)});},[sd,ed]);
+  useEffect(()=>{if(!sd||!ed){setInv({});return}supabase.from("inventory_status").select("equipment_id,total_quantity,outside_quantity").then(r=>{const m:Record<string,number>={};(r.data as any[]).forEach(v=>{m[v.equipment_id]=Math.max(0,v.total_quantity-v.outside_quantity)});setInv(m)});},[sd,ed]);
   const toggle = (id: string) => setSel(p => {
   const c = { ...p };
   const eq = eqs.find(e => e.id === id);
@@ -37,7 +34,7 @@ export default function NewBookingWizardV2(){
   if (n < 1 || n > available) return p;
   return { ...p, [id]: n };
 });
-  const fileChange=e=>{const f=e.target.files?.[0];if(!f)return;setRec(f);supabase.functions.invoke("create-receipt-upload",{body:{fileName:f.name,fileType:f.type}}).then(r=>{if(r.error)throw r.error;const{signedUrl,path}=r.data as any;fetch(signedUrl,{method:"PUT",headers:{"Content-Type":f.type},body:f});setRecPath(path)})};
+  const fileChange=(e: React.ChangeEvent<HTMLInputElement>)=>{const f=e.target.files?.[0];if(!f)return;setRec(f);supabase.functions.invoke("create-receipt-upload",{body:{fileName:f.name,fileType:f.type}}).then(r=>{if(r.error)throw r.error;const{signedUrl,path}=r.data as any;fetch(signedUrl,{method:"PUT",headers:{"Content-Type":f.type},body:f});setRecPath(path)})};
   const submit = async () => {
      const trimmedName = fullName.trim();
      const trimmedPhone = phone.trim();
@@ -71,224 +68,16 @@ export default function NewBookingWizardV2(){
       // reset
       setFullName("");
       setPhone("");
-       setNotes("");
       setSd(null);
       setEd(null);
       setSel({});
       setRec(null);
       setRecPath("");
-      setStep(0);
     } catch (e: any) {
       setErr(e.message || "خطأ");
     } finally {
       setLoad(false);
     }
-  };
-  const renderStep = () => {
-    if (step === 0) {
-      return (
-        <div>
-          <RentalCalendar startDate={sd} endDate={ed} setStartDate={setSd} setEndDate={setEd} />
-          <div className="flex justify-end mt-4">
-            <button
-              onClick={() => setStep(step + 1)}
-              className="bg-accent text-white py-2 px-4 rounded hover:bg-accent"
-               disabled={!sd || !ed}
-            >
-              التالي
-            </button>
-          </div>
-        </div>
-      );
-    }
-    if (step === 1) {
-      return (
-        <div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-            {eqs.map(eq => {
-              const av = inv[eq.id] || eq.total_quantity;
-              const selc = !!sel[eq.id];
-              return (
-                <div key={eq.id} className={`border p-1 ${selc ? "border-accent" : "border-gray-600"} flex flex-col items-center`}>
-                  <img src={eq.image_path || ""} alt={eq.name} className="w-full h-20 object-cover mb-1" />
-                  <p>{eq.name}</p>
-                  <p>{eq.rental_price.toLocaleString()} دج</p>
-                  <p>متوفر:{av}</p>
-                  {selc ? (
-                    <div className="flex items-center space-x-1">
-                      <button onClick={() => qty(eq.id, -1)}>-</button>
-                      <span>{sel[eq.id]}</span>
-                      <button onClick={() => qty(eq.id, 1)}>+</button>
-                      <button onClick={() => toggle(eq.id)}><X size={16} /></button>
-                    </div>
-                  ) : (
-                    <button onClick={() => toggle(eq.id)}>اختر</button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-          <div className="flex justify-between mt-4">
-            <button
-              onClick={() => setStep(step - 1)}
-              className="bg-gray-300 text-black py-2 px-4 rounded hover:bg-gray-400"
-            >
-              السابق
-            </button>
-            <button
-              onClick={() => setStep(step + 1)}
-              disabled={Object.keys(sel).length === 0}
-              className="bg-accent text-white py-2 px-4 rounded hover:bg-accent"
-            >
-              التالي
-            </button>
-          </div>
-        </div>
-      );
-    }
-    if (step === 2) {
-      return (
-        <div>
-          <div className="grid md:grid-cols-2 gap-2">
-            <div className="col-span-2">
-              <label className="block mb-1">
-                <User className="inline-block mr-2" />
-                الاسم واللقب
-              </label>
-              <input
-                type="text"
-                placeholder="مثال: محمد بن علي"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                className="w-full p-2 border rounded"
-              />
-            </div>
-            <div className="col-span-2">
-              <label className="block mb-1">
-                <Phone className="inline-block mr-2" />
-                رقم الهاتف
-              </label>
-              <input
-                type="tel"
-                placeholder="مثال: 0550123456"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="w-full p-2 border rounded"
-              />
-              <div className="col-span-2">
-                <label className="block mb-1">
-                  <User className="inline-block mr-2" />
-                  ملاحظات (اختياري)
-                </label>
-                <textarea
-                  placeholder="اكتب أي ملاحظات إضافية"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  className="w-full p-2 border rounded bg-white text-black placeholder-gray-500"
-                  rows={3}
-                />
-              </div>
-            </div>
-          </div>
-          <div className="flex justify-between mt-4">
-            <button
-              onClick={() => setStep(step - 1)}
-              className="bg-gray-300 text-black py-2 px-4 rounded hover:bg-gray-400"
-            >
-              السابق
-            </button>
-            <button
-              onClick={() => setStep(step + 1)}
-              disabled={!fullName || !phone}
-              className="bg-accent text-white py-2 px-4 rounded hover:bg-accent"
-            >
-              التالي
-            </button>
-          </div>
-        </div>
-      );
-    }
-    if (step === 3) {
-      return (
-        <div>
-          <div className="flex flex-col items-center">
-            <label>ارفع وصل الدفع</label>
-            <div className="border-dashed border-gray-600 p-4 rounded">
-              <input type="file" accept="image/*" onChange={fileChange} className="hidden" id="rec" />
-              <label htmlFor="rec" className="flex flex-col items-center">
-                <Upload className="text-accent" size={48} />
-                <span>انقر لتحميل صورة الفاتورة</span>
-                {rec && <span>{rec.name}</span>}
-              </label>
-            </div>
-          </div>
-          <div className="flex justify-between mt-4">
-            <button
-              onClick={() => setStep(step - 1)}
-              className="bg-gray-300 text-black py-2 px-4 rounded hover:bg-gray-400"
-            >
-              السابق
-            </button>
-            <button
-              onClick={() => setStep(step + 1)}
-              disabled={!recPath}
-              className="bg-accent text-white py-2 px-4 rounded hover:bg-accent"
-            >
-              التالي
-            </button>
-          </div>
-        </div>
-      );
-    }
-    if (step === 4) {
-      const startDate = sd ? new Date(sd).toLocaleDateString('ar-EG') : '';
-  const endDate = ed ? new Date(ed).toLocaleDateString('ar-EG') : '';
-  const days = sd && ed ? Math.max(0, Math.ceil((new Date(ed).getTime() - new Date(sd).getTime()) / (1000 * 60 * 60 * 24)) + 1) : 0;
-      const totalPrice = Object.entries(sel).reduce((sum, [id, q]) => {
-        const eq = eqs.find(e => e.id === id);
-        if (!eq) return sum;
-        return sum + q * eq.rental_price * days;
-      }, 0);
-      return (
-        <div>
-          <h3 className="text-xl font-semibold mb-2">مراجعة الطلب</h3>
-          <div>
-            <p><strong>التاريخ:</strong> {startDate} إلى {endDate}</p>
-            <p><strong>الاسم:</strong> {fullName}</p>
-            <p><strong>رقم الهاتف:</strong> {phone}</p>
-              {notes && <p><strong>ملاحظات:</strong> {notes}</p>}
-            <p>المعدات:</p>
-            <ul>
-              {Object.entries(sel).map(([id, q]) => {
-                const eq = eqs.find(e => e.id === id);
-                return (
-                  <li key={id}>
-                    {eq?.name} – {q} × {eq?.rental_price?.toLocaleString()} دج
-                  </li>
-                );
-              })}
-            </ul>
-            <p><strong>الإجمالي:</strong> {totalPrice.toLocaleString('ar-EG')} دج</p>
-          </div>
-          <div className="flex justify-between mt-4">
-            <button
-              onClick={() => setStep(step - 1)}
-              className="bg-gray-300 text-black py-2 px-4 rounded hover:bg-gray-400"
-            >
-              السابق
-            </button>
-            <button
-              onClick={submit}
-              disabled={load}
-              className="bg-accent text-white py-2 px-4 rounded hover:bg-accent"
-            >
-              {load ? "جاري الإرسال…" : "إرسال طلب الحجز"}
-            </button>
-          </div>
-        </div>
-      );
-    }
-    return null;
   };
 
   return (
@@ -418,7 +207,7 @@ export default function NewBookingWizardV2(){
           {load ? "جاري الإرسال…" : "إرسال طلب الحجز"}
         </button>
       </div>
-    <style jsx>{`
+    <style>{`
       input, textarea {
         background-color: white;
         color: black;
@@ -427,3 +216,9 @@ export default function NewBookingWizardV2(){
     </div>
   );
 }
+
+
+
+
+
+

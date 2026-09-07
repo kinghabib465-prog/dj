@@ -1,26 +1,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { getCorsHeaders } from "../_shared/corsHelper.ts";
 import { requireAdmin } from "../_shared/adminAuth.ts";
-console.log("VERIFY_PAYMENT_MODULE_BOOT");
-console.log("BOOT_ENV", {
-
-  hasUrl: Boolean(Deno.env.get("SUPABASE_URL")),
-  hasAnon: Boolean(Deno.env.get("SUPABASE_ANON_KEY")),
-  hasService: Boolean(Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"))
-});
 
 async function handler(req: Request) {
-  console.log("VERIFY_PAYMENT_HANDLER_ENTER");
-  console.log("VERIFY_PAYMENT_METHOD", req.method);
-  // Debug shortcut: If query param debug=true, return early with a simple response
-  const url = new URL(req.url);
-  if (url.searchParams.get("debug") === "true") {
-    return new Response(JSON.stringify({ debug: "handler entered", method: req.method }), {
-      status: 200,
-      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-    });
-  }
-  if (req.method === "OPTIONS") {
+    if (req.method === "OPTIONS") {
 
     return new Response(null, {
       headers: getCorsHeaders(req),
@@ -111,14 +94,7 @@ async function handler(req: Request) {
       );
     }
 
-    // Fetch booking status before processing
-    const { data: bookingBefore, error: fetchErrorBefore } = await supabase
-      .from("bookings")
-      .select("status")
-      .eq("id", bookingId)
-      .single();
-    console.log('booking status before process_payment_review:', bookingBefore?.status, fetchErrorBefore);
-
+    
     if (action !== "APPROVE" && action !== "REJECT") {
       return new Response(
         JSON.stringify({ error: "INVALID_ACTION" }),
@@ -139,15 +115,7 @@ async function handler(req: Request) {
       p_rejection_reason: rejectionReason ?? null,
       p_admin_id: auth.user.id,
     });
-    console.log('process_payment_review error:', error);
-    const { data: updatedBooking, error: fetchError } = await supabase
-      .from("bookings")
-      .select("status")
-      .eq("id", bookingId)
-      .single();
-    console.log('booking status after process_payment_review:', updatedBooking?.status, fetchError);
-    console.log('process_payment_review called');
-
+        
     if (error) {
       console.error(
         "process_payment_review failed",
@@ -178,8 +146,7 @@ async function handler(req: Request) {
     return new Response(
       JSON.stringify({
         success: true,
-        bookingStatus: finalBooking?.status,
-        fetchError: fetchBookingError?.message,
+        bookingStatus: finalBooking?.status
       }),
       {
         status: 200,

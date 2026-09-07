@@ -2,11 +2,10 @@ import dotenv from "dotenv";
 
 dotenv.config({ path: ".env.local" });
 
-// src/__tests__/return_flow.test.ts
+// src/__tests__/integration/return_flow.integration.test.ts
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-console.log('RUN_SUPABASE_INTEGRATION_TESTS =', process.env.RUN_SUPABASE_INTEGRATION_TESTS);
 // Dedicated integration-test client using publishable key (no VITE vars)
-import { anonClient, setupClient } from "./integration/supabaseTestClients";
+import { setupClient } from "./supabaseTestClients";
 const supabase = setupClient;
 
 // Helper to create test equipment if not exists
@@ -110,7 +109,14 @@ describe('Return workflow', () => {
 
   afterAll(async () => {
     // cleanup created records using privileged client
-    await setupClient.from("return_items").delete().eq("return_id", supabase.rpc("(select id from equipment_returns where booking_id = $1)", [bookingId]));
+    const { data: returnSession } = await setupClient
+      .from("equipment_returns")
+      .select("id")
+      .eq("booking_id", bookingId)
+      .single();
+    if (returnSession?.id) {
+      await setupClient.from("return_items").delete().eq("return_id", returnSession.id);
+    }
     await setupClient.from("equipment_returns").delete().eq("booking_id", bookingId);
     await setupClient.from("booking_items").delete().eq("booking_id", bookingId);
     await setupClient.from("bookings").delete().eq("id", bookingId);

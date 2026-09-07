@@ -47,8 +47,8 @@ describe("Equipment RLS", () => {
         password: adminPassword,
         email_confirm: true,
       });
-      if (createError) throw createError;
-      adminUser = newAdmin;
+      if (createError || !newAdmin?.user) throw createError ?? new Error("Failed to create admin user");
+      adminUser = newAdmin.user;
     }
     await setupClient.auth.admin.updateUserById(adminUser.id, { password: adminPassword });
     await setupClient.from('profiles').update({ is_admin: true }).eq('id', adminUser.id);

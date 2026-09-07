@@ -20,3 +20,4 @@ supabase/.env
 .supabase-api-keys.tmp.json
 .vercel
 .env*
+supabase/.temp/

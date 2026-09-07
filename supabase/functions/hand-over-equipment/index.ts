@@ -1,7 +1,11 @@
 import { supabase } from "../_shared/supabase.ts";
 import { requireAdmin } from "../_shared/adminAuth.ts";
+import { getCorsHeaders } from "../_shared/corsHelper.ts";
 
 Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: getCorsHeaders(req) });
+  }
   if (req.method !== "POST") {
     return new Response(
       JSON.stringify({
@@ -10,7 +14,7 @@ Deno.serve(async (req) => {
       {
         status: 405,
         headers: {
-          "Content-Type": "application/json",
+          ...getCorsHeaders(req), "Content-Type": "application/json",
         },
       }
     );
@@ -32,7 +36,7 @@ Deno.serve(async (req) => {
       {
         status: 400,
         headers: {
-          "Content-Type": "application/json",
+          ...getCorsHeaders(req), "Content-Type": "application/json",
         },
       }
     );
@@ -48,7 +52,6 @@ Deno.serve(async (req) => {
     )
     .eq("id", bookingId)
     .single();
-  console.log('handover booking status:', booking?.status, 'remaining_amount:', booking?.remaining_amount);
 
   if (bookingError || !booking) {
     return new Response(
@@ -58,7 +61,7 @@ Deno.serve(async (req) => {
       {
         status: 404,
         headers: {
-          "Content-Type": "application/json",
+          ...getCorsHeaders(req), "Content-Type": "application/json",
         },
       }
     );
@@ -77,7 +80,7 @@ Deno.serve(async (req) => {
       {
         status: 400,
         headers: {
-          "Content-Type": "application/json",
+          ...getCorsHeaders(req), "Content-Type": "application/json",
         },
       }
     );
@@ -109,7 +112,7 @@ Deno.serve(async (req) => {
       {
         status: 500,
         headers: {
-          "Content-Type": "application/json",
+          ...getCorsHeaders(req), "Content-Type": "application/json",
         },
       }
     );
@@ -137,7 +140,7 @@ Deno.serve(async (req) => {
     {
       status: 200,
       headers: {
-        "Content-Type": "application/json",
+        ...getCorsHeaders(req), "Content-Type": "application/json",
       },
     }
   );

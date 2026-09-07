@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
       {
         status: 400,
         headers: {
-          "Content-Type": "application/json",
+          ...getCorsHeaders(req), "Content-Type": "application/json",
         },
       }
     );
@@ -54,7 +54,6 @@ Deno.serve(async (req) => {
     .eq("id", bookingId)
     .single();
 
-  console.log('record_balance_payment fetched booking:', booking?.status, booking?.remaining_amount);
   if (bookingError || !booking) {
     return new Response(
       JSON.stringify({
@@ -63,7 +62,7 @@ Deno.serve(async (req) => {
       {
         status: 404,
         headers: {
-          "Content-Type": "application/json",
+          ...getCorsHeaders(req), "Content-Type": "application/json",
         },
       }
     );
@@ -79,7 +78,7 @@ Deno.serve(async (req) => {
       {
         status: 400,
         headers: {
-          "Content-Type": "application/json",
+          ...getCorsHeaders(req), "Content-Type": "application/json",
         },
       }
     );
@@ -93,13 +92,12 @@ Deno.serve(async (req) => {
       {
         status: 400,
         headers: {
-          "Content-Type": "application/json",
+          ...getCorsHeaders(req), "Content-Type": "application/json",
         },
       }
     );
   }
 
-    console.log('record_balance_payment booking status', booking?.status);
   // Use atomic RPC to record balance payment
   const { data: paymentId, error: rpcError } = await supabase.rpc('record_balance_payment', {
     p_booking_id: bookingId,
@@ -112,7 +110,7 @@ Deno.serve(async (req) => {
       JSON.stringify({ error: 'Payment processing failed' }),
       {
         status: 500,
-        headers: { "Content-Type": "application/json" },
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
       }
     );
   }
@@ -126,107 +124,7 @@ return new Response(
   }),
   {
     status: 200,
-    headers: { "Content-Type": "application/json" },
+    headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
   }
 );
-/*
-  const {
-    data: payment,
-    error: paymentError,
-  } = await supabase
-    .from("payments")
-    .insert({
-      booking_id: bookingId,
-      type: "BALANCE",
-      amount: booking.remaining_amount,
-      method: "CASH",
-      status: "VERIFIED",
-      verified_at:
-        new Date().toISOString(),
-      verified_by: auth.user.id,
-      created_at:
-        new Date().toISOString(),
-      updated_at:
-        new Date().toISOString(),
-    })
-    .select()
-    .single();
-
-  if (paymentError || !payment) {
-    console.error(
-      "Balance payment insert failed",
-      paymentError
-    );
-
-    return new Response(
-      JSON.stringify({
-        error: "Payment insert failed",
-      }),
-      {
-        status: 500,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
-  }
-
-  const { error: updateError } =
-    await supabase
-      .from("bookings")
-      .update({
-        remaining_amount: 0,
-        status: "READY_FOR_PICKUP",
-      })
-      .eq("id", bookingId);
-
-  if (updateError) {
-    console.error(
-      "Booking update failed",
-      updateError
-    );
-
-    return new Response(
-      JSON.stringify({
-        error: "Booking update failed",
-      }),
-      {
-        status: 500,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      }
-    );
-  }
-
-  await supabase
-    .from("audit_logs")
-    .insert({
-      admin_id: auth.user.id,
-      action:
-        "BALANCE_PAYMENT_RECORDED",
-      entity: "booking",
-      entity_id: bookingId,
-      metadata: {
-        payment_id: payment.id,
-      },
-      created_at:
-        new Date().toISOString(),
-    });
-
-  return new Response(
-    JSON.stringify({
-      success: true,
-      bookingId,
-      paymentId: payment.id,
-    }),
-    {
-      status: 200,
-      headers: {
-        "Content-Type":
-          "application/json",
-      },
-    }
-  );
-*/
 });
