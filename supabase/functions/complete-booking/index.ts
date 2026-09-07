@@ -40,21 +40,19 @@ Deno.serve(async (req) => {
     });
   }
 
-
   // Verify completion conditions
   if (booking.remaining_amount > 0) {
     return new Response(JSON.stringify({ error: "Outstanding balance" }), {
       status: 400,
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
-}
+  }
   if (booking.status !== "EQUIPMENT_OUT" && booking.status !== "RETURN_PENDING") {
     return new Response(JSON.stringify({ error: "Invalid status for completion" }), {
       status: 400,
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
-}
- 
+  }
 
   // Check that no equipment is still out (use a helper view or function)
   const { data: outsideCount, error: outsideError } = await supabase.rpc("get_equipment_outside_quantity", { p_booking_id: bookingId });
@@ -63,14 +61,13 @@ Deno.serve(async (req) => {
       status: 500,
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
-}
+  }
   if (outsideCount && outsideCount > 0) {
     return new Response(JSON.stringify({ error: "Equipment still out" }), {
       status: 400,
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
-}
- 
+  }
 
   // Check for unresolved missing items – assume a view returns count
   const { data: missingCount, error: missingError } = await supabase.rpc("get_unresolved_missing_count", { p_booking_id: bookingId });
@@ -79,19 +76,16 @@ Deno.serve(async (req) => {
       status: 500,
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
-}
+  }
   if (missingCount && missingCount > 0) {
     return new Response(JSON.stringify({ error: "Unresolved missing items" }), {
       status: 400,
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
-}
- 
+  }
 
   const now = new Date().toISOString();
-  const scheduledDelete = new Date(Date.now() + 7 * 24 *  ​60 * 60 *  ​1000).toISOString();
-
- 
+  const scheduledDelete = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
   // Update booking to COMPLETED
   const { error: updateError } = await supabase
@@ -107,8 +101,7 @@ Deno.serve(async (req) => {
       status: 500,
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
-}
- 
+  }
 
   // Audit log
   await supabase.from("audit_logs").insert([
@@ -122,11 +115,8 @@ Deno.serve(async (req) => {
     },
   ]);
 
- 
-
   return new Response(JSON.stringify({ success: true, bookingId }), {
     status: 200,
     headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
   });
 });
-
