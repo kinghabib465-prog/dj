@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FunctionsHttpError } from "@supabase/supabase-js";
+import { FunctionsFetchError, FunctionsHttpError } from "@supabase/supabase-js";
 import {
   AlertCircle,
   Boxes,
@@ -30,6 +30,8 @@ const SUBMIT_ERRORS: Record<string, string> = {
   INSUFFICIENT_AVAILABILITY: "الكمية المطلوبة غير متوفرة في الفترة المختارة.",
   NO_EQUIPMENT_SELECTED: "اختر معدات واحدة على الأقل.",
   SERVER_ERROR: "حدث خطأ في الخادم، حاول مرة أخرى.",
+  SUBMIT_NETWORK:
+    "تعذر الاتصال بخادم الحجز — تأكد من نشر الدالة بأحدث إصدار: npx supabase functions deploy create-public-booking",
 };
 
 const UPLOAD_ERRORS: Record<string, string> = {
@@ -41,6 +43,8 @@ const UPLOAD_ERRORS: Record<string, string> = {
   BAD_UPLOAD_RESPONSE: "استجابة غير صالحة من خادم الرفع، حاول مرة أخرى.",
   STORAGE_PUT_FAILED: "تعذر رفع الملف إلى التخزين، تحقق من الاتصال وحاول مرة أخرى.",
   UPLOAD_FAILED: "فشل رفع وصل العربون، حاول مرة أخرى.",
+  NETWORK_OR_CORS:
+    "تعذر الاتصال بخادم الرفع — تأكد من نشر الدالة بأحدث إصدار: npx supabase functions deploy create-receipt-upload",
 };
 
 export default function NewBookingWizardV2() {
@@ -186,6 +190,9 @@ export default function NewBookingWizardV2() {
         body: { fileName: f.name, fileType: f.type },
       });
       if (error) {
+        if (error instanceof FunctionsFetchError) {
+          throw new Error("NETWORK_OR_CORS");
+        }
         let code = "";
         if (error instanceof FunctionsHttpError) {
           try {
@@ -259,6 +266,9 @@ export default function NewBookingWizardV2() {
         },
       });
       if (error) {
+        if (error instanceof FunctionsFetchError) {
+          throw new Error("SUBMIT_NETWORK");
+        }
         let msg = SUBMIT_ERRORS.SERVER_ERROR;
         if (error instanceof FunctionsHttpError) {
           try {
