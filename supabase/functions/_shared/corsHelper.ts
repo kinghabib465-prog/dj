@@ -14,20 +14,27 @@ export function getCorsHeaders(req: Request): Record<string, string> {
     configured.trim() === "" ||
     allowedList.includes("*");
 
-  const allowOrigin = allowAll
-    ? "*"
-    : allowedList.includes(origin)
-      ? origin
-      : "";
+  // Match an explicit entry, any *.vercel.app preview/production URL, or localhost.
+  const isAllowed =
+    allowAll ||
+    allowedList.includes(origin) ||
+    /\.vercel\.app$/.test(origin) ||
+    origin.startsWith("http://localhost:") ||
+    origin.startsWith("https://localhost:");
 
   const headers: Record<string, string> = {
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Allow-Headers":
       "Authorization, apikey, Content-Type, x-client-info",
+    // Keep preflight cache short so CORS fixes propagate quickly.
+    "Access-Control-Max-Age": "60",
   };
 
-  if (allowOrigin) {
-    headers["Access-Control-Allow-Origin"] = allowOrigin;
+  // Echo the exact origin when credentials/custom headers (Authorization) are present;
+  // fall back to "*" only for pure wildcard configurations.
+  if (isAllowed) {
+    headers["Access-Control-Allow-Origin"] =
+      allowAll && allowedList.includes("*") ? "*" : origin;
   }
 
   return headers;
