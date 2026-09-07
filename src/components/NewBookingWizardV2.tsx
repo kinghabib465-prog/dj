@@ -32,6 +32,17 @@ const SUBMIT_ERRORS: Record<string, string> = {
   SERVER_ERROR: "حدث خطأ في الخادم، حاول مرة أخرى.",
 };
 
+const UPLOAD_ERRORS: Record<string, string> = {
+  INVALID_FILE_TYPE: "صيغة الملف غير مدعومة للرفع (JPG / PNG / WEBP فقط).",
+  MISSING_SECRET_KEY: "خطأ في إعدادات الخادم (مفتاح التخزين مفقود)، تواصل مع المسؤول.",
+  SUPABASE_CLIENT_CREATION_ERROR: "خطأ في إعدادات الخادم، تواصل مع المسؤول.",
+  UPLOAD_URL_ERROR: "تعذر إنشاء رابط الرفع، حاول مرة أخرى.",
+  HANDLER_ERROR: "خطأ غير متوقع في الخادم، حاول مرة أخرى.",
+  BAD_UPLOAD_RESPONSE: "استجابة غير صالحة من خادم الرفع، حاول مرة أخرى.",
+  STORAGE_PUT_FAILED: "تعذر رفع الملف إلى التخزين، تحقق من الاتصال وحاول مرة أخرى.",
+  UPLOAD_FAILED: "فشل رفع وصل العربون، حاول مرة أخرى.",
+};
+
 export default function NewBookingWizardV2() {
   const navigate = useNavigate();
 
@@ -174,20 +185,36 @@ export default function NewBookingWizardV2() {
       const { data, error } = await supabase.functions.invoke("create-receipt-upload", {
         body: { fileName: f.name, fileType: f.type },
       });
-      if (error) throw error;
-      const uploadUrl = (data as any)?.uploadUrl;
-      const objectPath = (data as any)?.objectPath;
+      if (error) {
+        let code = "";
+        if (error instanceof FunctionsHttpError) {
+          try {
+            const payload = await error.context.json();
+            code = payload?.error ?? "";
+          } catch {
+            /* ignore */
+          }
+        }
+        throw new Error(UPLOAD_ERRORS[code] ? code : code || "UPLOAD_FAILED");
+      }
+      // Accept both current and legacy response keys.
+      const uploadUrl = (data as any)?.uploadUrl ?? (data as any)?.signedUrl;
+      const objectPath = (data as any)?.objectPath ?? (data as any)?.path;
       if (!uploadUrl || !objectPath) throw new Error("BAD_UPLOAD_RESPONSE");
       const res = await fetch(uploadUrl, {
         method: "PUT",
         headers: { "Content-Type": f.type },
         body: f,
       });
-      if (!res.ok) throw new Error("UPLOAD_FAILED");
+      if (!res.ok) throw new Error("STORAGE_PUT_FAILED");
       setRecPath(objectPath);
-    } catch {
+    } catch (e: any) {
       setRec(null);
-      setErr("فشل رفع وصل العربون، حاول مرة أخرى.");
+      const code = e?.message ?? "";
+      setErr(
+        UPLOAD_ERRORS[code] ??
+          `فشل رفع وصل العربون (${code || "خطأ غير معروف"}). حاول مرة أخرى.`
+      );
     } finally {
       setUploading(false);
     }
