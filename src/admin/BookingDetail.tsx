@@ -14,6 +14,10 @@ import {
   ThumbsUp,
   ThumbsDown,
   Receipt,
+  Trash2,
+  AlertTriangle,
+  Download,
+  Upload,
 } from "lucide-react";
 import AdminLayout from "../components/AdminLayout";
 
@@ -39,6 +43,7 @@ interface Payment {
   amount: number;
   status: string;
   method: string;
+  receipt_path: string | null;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -89,7 +94,7 @@ export default function BookingDetail() {
       setBooking(data);
       const { data: payData } = await supabase
         .from("payments")
-        .select("id,type,amount,status,method")
+        .select("id,type,amount,status,method,receipt_path")
         .eq("booking_id", bookingId)
         .order("created_at", { ascending: true });
       setPayments(payData || []);
@@ -97,6 +102,86 @@ export default function BookingDetail() {
     };
     if (bookingId) fetch();
   }, [bookingId]);
+
+  const depositPayment = payments.find((p) => p.type === "DEPOSIT");
+  const receiptPath = depositPayment?.receipt_path ?? null;
+  const [receiptUrl, setReceiptUrl] = useState<string | null>(null);
+  const [receiptLoading, setReceiptLoading] = useState(false);
+  const [showReplace, setShowReplace] = useState(false);
+  const [replaceFile, setReplaceFile] = useState<File | null>(null);
+  const [replacePreview, setReplacePreview] = useState<string | null>(null);
+  const [showDelete, setShowDelete] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!receiptPath) { setReceiptUrl(null); return; }
+    setReceiptLoading(true);
+    supabase.storage.from("booking-receipts").createSignedUrl(receiptPath, 3600)
+      .then(({ data, error }) => {
+        if (cancelled) return;
+        setReceiptUrl(error ? null : data?.signedUrl ?? null);
+        setReceiptLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, [receiptPath]);
+
+  const pickReplaceFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0] || null;
+    setReplaceFile(f);
+    setReplacePreview(f ? URL.createObjectURL(f) : null);
+  };
+
+  const replaceReceipt = async () => {
+    if (!replaceFile || !booking) return;
+    setMsg(null); setActing("replace-receipt");
+    try {
+      const ext = replaceFile.name.split(".").pop() || "jpg";
+      const newPath = `receipts/${booking.id}/${Date.now()}.${ext}`;
+      const { error: upErr } = await supabase.storage.from("booking-receipts")
+        .upload(newPath, replaceFile, { contentType: replaceFile.type, upsert: false });
+      if (upErr) throw upErr;
+      if (depositPayment) {
+        const { error: payErr } = await supabase.from("payments")
+          .update({ receipt_path: newPath }).eq("id", depositPayment.id);
+        if (payErr) throw payErr;
+      }
+      const { error: bkErr } = await supabase.from("bookings")
+        .update({ receipt_path: newPath }).eq("id", booking.id);
+      if (bkErr) throw bkErr;
+      if (receiptPath) await supabase.storage.from("booking-receipts").remove([receiptPath]);
+      setShowReplace(false); setReplaceFile(null); setReplacePreview(null);
+      setMsg({ type: "ok", text: "تم استبدال صورة الوصل بنجاح" });
+      setTimeout(() => window.location.reload(), 900);
+    } catch {
+      setActing(null);
+      setMsg({ type: "err", text: "تعذر استبدال صورة الوصل" });
+    }
+  };
+
+  const moveToTrash = async () => {
+    setMsg(null); setActing("soft-delete");
+    const { error } = await supabase.rpc("soft_delete_booking", { p_booking_id: bookingId });
+    setActing(null);
+    if (error) { setMsg({ type: "err", text: "تعذر نقل الحجز إلى السلة" }); return; }
+    setMsg({ type: "ok", text: "تم نقل الحجز إلى سلة المحذوفات" });
+    setTimeout(() => navigate("/admin/bookings"), 700);
+  };
+
+  const permanentDelete = async () => {
+    setMsg(null); setActing("permanent-delete");
+    try {
+      const { data, error } = await supabase.rpc("permanently_delete_booking", { p_booking_id: bookingId });
+      if (error) throw error;
+      const path = typeof data === "string" ? data : "";
+      if (path) await supabase.storage.from("booking-receipts").remove([path]);
+      setShowDelete(false);
+      setMsg({ type: "ok", text: "تم الحذف النهائي للحجز" });
+      setTimeout(() => navigate("/admin/bookings"), 700);
+    } catch {
+      setActing(null); setShowDelete(false);
+      setMsg({ type: "err", text: "تعذر الحذف النهائي" });
+    }
+  };
 
   const invokeEdge = async (fn: string) => {
     setMsg(null);
@@ -177,6 +262,7 @@ export default function BookingDetail() {
   const canHandOver = booking.status === "READY_FOR_PICKUP" && booking.remaining_amount === 0;
   const canStartReturn = booking.status === "EQUIPMENT_OUT";
   const canComplete = booking.status === "RETURN_PENDING" && booking.remaining_amount === 0;
+  const canTrash = ["PENDING_PAYMENT_REVIEW", "PAYMENT_REJECTED", "CANCELLED", "EXPIRED", "COMPLETED"].includes(booking.status);
 
   return (
     <AdminLayout>
@@ -264,6 +350,36 @@ export default function BookingDetail() {
           </div>
         )}
 
+        <div className="mt-6">
+          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-300">
+            <Receipt size={16} className="text-accent" />
+            صورة وصل العربون
+          </h3>
+          {receiptLoading ? (
+            <div className="flex h-40 items-center justify-center rounded-lg bg-white/5">
+              <Loader2 className="animate-spin text-accent" size={24} />
+            </div>
+          ) : receiptUrl ? (
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
+              <img src={receiptUrl} alt="وصل العربون" className="max-h-80 rounded-lg border border-white/10 object-contain" />
+              <div className="flex flex-col gap-2">
+                <a href={receiptUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-sm text-gray-300 hover:bg-white/5">
+                  <Download size={16} />
+                  فتح / تنزيل
+                </a>
+                <button onClick={() => setShowReplace(true)} className="flex items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-sm text-gray-300 hover:bg-white/5">
+                  <Upload size={16} />
+                  استبدال الصورة
+                </button>
+              </div>
+            </div>
+          ) : (
+            <p className="rounded-lg bg-white/5 px-4 py-3 text-sm text-gray-400">
+              لا توجد صورة وصل مرفوعة لهذا الحجز.
+            </p>
+          )}
+        </div>
+
         <div className="mt-6 flex flex-wrap gap-3">
           {pendingReview && (
             <>
@@ -295,6 +411,16 @@ export default function BookingDetail() {
               إكمال الحجز
             </Action>
           )}
+          {canTrash && (
+            <Action onClick={moveToTrash} icon={<Trash2 size={18} />} ghost disabled={acting === "soft-delete"}>
+              نقل إلى السلة
+            </Action>
+          )}
+          {canTrash && (
+            <Action onClick={() => setShowDelete(true)} icon={<Trash2 size={18} />} ghost disabled={acting === "permanent-delete"}>
+              حذف نهائي
+            </Action>
+          )}
         </div>
       </div>
 
@@ -322,6 +448,53 @@ export default function BookingDetail() {
                 className="rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-50"
               >
                 تأكيد الرفض
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showReplace && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-md rounded-xl border border-white/10 bg-gray-900 p-6">
+            <h3 className="mb-4 text-lg font-bold">استبدال صورة الوصل</h3>
+            {replacePreview && (
+              <img src={replacePreview} alt="معاينة الوصل الجديد" className="mx-auto max-h-56 rounded-lg border border-white/10 object-contain" />
+            )}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={pickReplaceFile}
+              className="mt-4 w-full rounded-lg border border-white/10 bg-white/5 p-2 text-sm text-gray-300"
+            />
+            <div className="mt-4 flex justify-end gap-3">
+              <button onClick={() => setShowReplace(false)} className="rounded-lg border border-white/15 px-4 py-2 text-sm text-gray-300 hover:bg-white/5">
+                إلغاء
+              </button>
+              <button onClick={replaceReceipt} disabled={!replaceFile || acting === "replace-receipt"} className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-gray-900 hover:bg-accent/90 disabled:opacity-50">
+                {acting === "replace-receipt" ? "جاري الرفع…" : "تحديث الصورة"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-md rounded-xl border border-white/10 bg-gray-900 p-6">
+            <h3 className="mb-2 flex items-center gap-2 text-lg font-bold text-red-400">
+              <AlertTriangle size={20} />
+              تأكيد الحذف النهائي
+            </h3>
+            <p className="text-sm text-gray-400">
+              سيتم حذف الحجز رقم {booking?.booking_number} مع عناصره ومدفوعاته وصورة الوصل نهائياً من قاعدة البيانات ومخزن الملفات. لا يمكن التراجع.
+            </p>
+            <div className="mt-4 flex justify-end gap-3">
+              <button onClick={() => setShowDelete(false)} className="rounded-lg border border-white/15 px-4 py-2 text-sm text-gray-300 hover:bg-white/5">
+                إلغاء
+              </button>
+              <button onClick={permanentDelete} disabled={acting === "permanent-delete"} className="rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-50">
+                {acting === "permanent-delete" ? "جاري الحذف…" : "حذف نهائي"}
               </button>
             </div>
           </div>

@@ -10,6 +10,8 @@ import {
   LogOut,
   Menu,
   X,
+  PackagePlus,
+  Trash2,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 
@@ -20,6 +22,8 @@ const navItems = [
   { to: "/admin/equipment-inside", label: "داخل المتجر", icon: Truck },
   { to: "/admin/equipment-outside", label: "خارج المتجر", icon: ArrowLeftFromLine },
   { to: "/admin/calendar", label: "التقويم", icon: CalendarDays },
+  { to: "/admin/equipment/add", label: "إضافة معدة", icon: PackagePlus },
+  { to: "/admin/trash", label: "سلة المحذوفات", icon: Trash2 },
 ];
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

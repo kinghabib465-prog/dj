@@ -14,6 +14,8 @@ import ReturnsDetail from "./admin/ReturnsDetail";
 import EquipmentInside from "./admin/EquipmentInside";
 import EquipmentOutside from "./admin/EquipmentOutside";
 import Calendar from "./admin/Calendar";
+import TrashList from "./admin/TrashList";
+import EquipmentAdd from "./admin/EquipmentAdd";
 import ProtectedAdminRoute from "./components/ProtectedAdminRoute";
 
 const App: React.FC = () => {
@@ -38,6 +40,8 @@ const App: React.FC = () => {
         <Route path="/admin/equipment-inside" element={<EquipmentInside />} />
         <Route path="/admin/equipment-outside" element={<EquipmentOutside />} />
         <Route path="/admin/calendar" element={<Calendar />} />
+        <Route path="/admin/equipment/add" element={<EquipmentAdd />} />
+        <Route path="/admin/trash" element={<TrashList />} />
       </Route>
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/" replace />} />
