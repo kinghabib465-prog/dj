@@ -43,12 +43,13 @@ export default async function handler(req: Request) {
   const { data, error } = await supabase.rpc("create_booking", { payload });
 
   if (error) {
-    // Map known errors to user-friendly messages
+    // Map known errors to user-friendly codes; include raw detail for debugging.
     let errMsg = "SERVER_ERROR";
+    let detail = error.message ?? "";
     if (error.message.includes("INVALID_REQUEST")) errMsg = "INVALID_REQUEST";
-    if (error.message.includes("INVALID_RENTAL_PERIOD")) errMsg = "INVALID_RENTAL_PERIOD";
-    if (error.message.includes("INSUFFICIENT_AVAILABILITY")) errMsg = "INSUFFICIENT_AVAILABILITY";
-    return new Response(JSON.stringify({ error: errMsg }), {
+    else if (error.message.includes("INVALID_RENTAL_PERIOD")) errMsg = "INVALID_RENTAL_PERIOD";
+    else if (error.message.includes("INSUFFICIENT_AVAILABILITY")) errMsg = "INSUFFICIENT_AVAILABILITY";
+    return new Response(JSON.stringify({ error: errMsg, detail }), {
       status: 400,
       headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
     });
