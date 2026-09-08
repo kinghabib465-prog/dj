@@ -52,14 +52,14 @@ export default function AdminDashboard() {
           value: pending.count ?? 0,
           icon: <Clock size={24} />,
           color: "text-warning",
-          to: "/admin/returns",
+          to: "/admin/bookings",
         },
         {
           label: "مؤكد — جاهز للتسليم",
           value: confirmed.count ?? 0,
           icon: <CheckCircle2 size={24} />,
           color: "text-success",
-          to: "/admin/returns",
+          to: "/admin/bookings",
         },
         {
           label: "معدات عند الزبون",
@@ -130,7 +130,7 @@ export default function AdminDashboard() {
         <QuickLink
           to="/admin/equipment-outside"
           title="المعدات خارج المتجر"
-          desc "كل المعدات المسلمة مع تواريخ الإرجاع المتوقعة"
+          desc="كل المعدات المسلمة مع تواريخ الإرجاع المتوقعة"
           icon={<ArrowLeftFromLine size={28} className="text-info" />}
         />
         <QuickLink

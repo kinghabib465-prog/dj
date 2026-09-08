@@ -7,6 +7,7 @@ import BookingSuccess from "./pages/BookingSuccess";
 import Contact from "./pages/Contact";
 import AdminLogin from "./pages/admin/Login";
 import AdminDashboard from "./admin/Dashboard";
+import BookingsList from "./admin/BookingsList";
 import BookingDetail from "./admin/BookingDetail";
 import ReturnsList from "./admin/ReturnsList";
 import ReturnsDetail from "./admin/ReturnsDetail";
@@ -29,6 +30,8 @@ const App: React.FC = () => {
       {/* Protected admin routes */}
       <Route element={<ProtectedAdminRoute />}>
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/admin/bookings" element={<BookingsList />} />
+        <Route path="/admin/bookings/:bookingId" element={<BookingDetail />} />
         <Route path="/admin/booking/:bookingId" element={<BookingDetail />} />
         <Route path="/admin/returns" element={<ReturnsList />} />
         <Route path="/admin/returns/:bookingId" element={<ReturnsDetail />} />
