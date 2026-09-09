@@ -34,7 +34,7 @@ const EquipmentPage: React.FC = () => {
               )}
               <h3 className="text-xl font-bold mt-2">{item.name}</h3>
               <p className="text-sm mt-1">{item.description}</p>
-              <p className="mt-2 text-success">{item.rental_price.toLocaleString()} دج / اليوم</p>
+              <p className="mt-2 text-success">{item.rental_price.toLocaleString("en-US")} دج / اليوم</p>
             </div>
           ))}
         </div>

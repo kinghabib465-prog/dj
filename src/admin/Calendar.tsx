@@ -245,7 +245,7 @@ export default function Calendar() {
         <div className="mt-6 rounded-xl border border-white/10 bg-white/5 p-4 sm:p-6">
           <h3 className="mb-4 flex items-center gap-2 text-lg font-bold">
             <CalendarDays size={18} className="text-accent" />
-            حجوزات يوم {fmtDay(selected).toLocaleDateString("ar-EG", { weekday: "long", day: "numeric", month: "long" })}
+            حجوزات يوم {fmtDay(selected).toLocaleDateString("ar-EG-u-nu-latn", { weekday: "long", day: "numeric", month: "long" })}
           </h3>
           {selectedEvents.length === 0 ? (
             <p className="text-sm text-gray-400">لا توجد حجوزات في هذا اليوم.</p>

@@ -50,7 +50,7 @@ const STATUS_COLORS: Record<string, string> = {
   EXPIRED: "bg-gray-500/15 text-gray-400",
 };
 
-const fmt = (n: number) => (Number.isFinite(n) ? n.toLocaleString("ar-DZ") : "0");
+const fmt = (n: number) => (Number.isFinite(n) ? n.toLocaleString("en-US") : "0");
 
 export default function BookingsList() {
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -158,7 +158,7 @@ export default function BookingsList() {
                   <td className="px-4 py-3">
                     <span className="flex items-center gap-2">
                       <CalendarDays size={14} className="text-gray-500" />
-                      {new Date(b.rental_start_at).toLocaleDateString("ar-EG")}
+                      {new Date(b.rental_start_at).toLocaleDateString("ar-EG-u-nu-latn")}
                     </span>
                   </td>
                   <td className="px-4 py-3">

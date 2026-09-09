@@ -46,7 +46,7 @@ const EquipmentPreview: React.FC = () => {
               )}
               <div className="p-4">
                 <h3 className="text-xl font-bold">{item.name}</h3>
-                <p className="text-sm text-gray-400 mb-2">{item.rental_price.toLocaleString()} دج / يوم</p>
+                <p className="text-sm text-gray-400 mb-2">{item.rental_price.toLocaleString("en-US")} دج / يوم</p>
                 <Link to={`/booking?equipment=${item.id}`} className="inline-flex items-center gap-2 text-accent hover:underline">
                   اختر للحجز <CheckCircle2 size={16} />
                 </Link>

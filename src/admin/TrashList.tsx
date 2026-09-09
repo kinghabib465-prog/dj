@@ -142,7 +142,7 @@ export default function TrashList() {
                   </td>
                   <td className="p-4">{STATUS_LABELS[b.status] ?? b.status}</td>
                   <td className="p-4 text-gray-400">
-                    {b.deleted_at ? new Date(b.deleted_at).toLocaleDateString("ar-EG") : "—"}
+                    {b.deleted_at ? new Date(b.deleted_at).toLocaleDateString("ar-EG-u-nu-latn") : "—"}
                   </td>
                   <td className="p-4">
                     <div className="flex gap-2">

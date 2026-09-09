@@ -207,7 +207,7 @@ export default function EquipmentOutside() {
                     <div className="flex flex-col">
                       <span className={`flex items-center gap-2 text-xs font-medium ${a.overdue ? "text-red-400" : "text-gray-300"}`}>
                         <CalendarClock size={14} />
-                        {new Date(a.expected_return_at).toLocaleDateString("ar-EG")}
+                        {new Date(a.expected_return_at).toLocaleDateString("ar-EG-u-nu-latn")}
                       </span>
                       {a.overdue ? (
                         <span className="mt-0.5 text-xs font-semibold text-red-400">متأخر {Math.abs(a.daysLeft)} يوم</span>

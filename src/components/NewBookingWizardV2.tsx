@@ -22,7 +22,7 @@ type Eq = {
   total_quantity: number;
 };
 
-const fmt = (n: number) => (Number.isFinite(n) ? n.toLocaleString("ar-DZ") : "0");
+const fmt = (n: number) => (Number.isFinite(n) ? n.toLocaleString("en-US") : "0");
 
 const SUBMIT_ERRORS: Record<string, string> = {
   INVALID_REQUEST: "بيانات الطلب غير مكتملة، تأكد من تعبئة كل الحقول.",

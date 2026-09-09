@@ -66,7 +66,7 @@ const STATUS_COLORS: Record<string, string> = {
   PAYMENT_REJECTED: "bg-red-500/15 text-red-300",
 };
 
-const fmt = (n: number) => (Number.isFinite(n) ? n.toLocaleString("ar-DZ") : "0");
+const fmt = (n: number) => (Number.isFinite(n) ? n.toLocaleString("en-US") : "0");
 
 export default function BookingDetail() {
   const { bookingId } = useParams<{ bookingId: string }>();
@@ -262,7 +262,7 @@ export default function BookingDetail() {
   const canHandOver = booking.status === "READY_FOR_PICKUP" && booking.remaining_amount === 0;
   const canStartReturn = booking.status === "EQUIPMENT_OUT";
   const canComplete = booking.status === "RETURN_PENDING" && booking.remaining_amount === 0;
-  const canTrash = ["PENDING_PAYMENT_REVIEW", "PAYMENT_REJECTED", "CANCELLED", "EXPIRED", "COMPLETED"].includes(booking.status);
+  const canTrash = true; // الحذف متاح لجميع الحالات — صلاحية كاملة للأدمن
 
   return (
     <AdminLayout>
@@ -305,7 +305,7 @@ export default function BookingDetail() {
           <Info
             icon={<CalendarDays size={18} />}
             label="فترة الإيجار"
-            value={`${new Date(booking.rental_start_at).toLocaleDateString("ar-EG")} → ${new Date(booking.expected_return_at).toLocaleDateString("ar-EG")}`}
+            value={`${new Date(booking.rental_start_at).toLocaleDateString("ar-EG-u-nu-latn")} → ${new Date(booking.expected_return_at).toLocaleDateString("ar-EG-u-nu-latn")}`}
           />
           <Info
             icon={<Banknote size={18} />}
@@ -488,6 +488,11 @@ export default function BookingDetail() {
             </h3>
             <p className="text-sm text-gray-400">
               سيتم حذف الحجز رقم {booking?.booking_number} مع عناصره ومدفوعاته وصورة الوصل نهائياً من قاعدة البيانات ومخزن الملفات. لا يمكن التراجع.
+              {booking && ["CONFIRMED", "READY_FOR_PICKUP", "EQUIPMENT_OUT", "RETURN_PENDING"].includes(booking.status) && (
+                <p className="mt-2 rounded-lg bg-warning/15 px-3 py-2 text-xs text-warning">
+                  تنبيه: هذا الحجز نشط حالياً — الحذف النهائي سيؤثر على حالة المخزون المرتبطة به.
+                </p>
+              )}
             </p>
             <div className="mt-4 flex justify-end gap-3">
               <button onClick={() => setShowDelete(false)} className="rounded-lg border border-white/15 px-4 py-2 text-sm text-gray-300 hover:bg-white/5">
