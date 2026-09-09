@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import {
   Loader2,
@@ -9,6 +10,8 @@ import {
   Boxes,
   RefreshCw,
   Wrench,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import AdminLayout from "../components/AdminLayout";
 
@@ -31,6 +34,39 @@ export default function EquipmentInside() {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [refreshing, setRefreshing] = useState(false);
+  const navigate = useNavigate();
+  const [confirmDelete, setConfirmDelete] = useState<InventoryItem | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [delMsg, setDelMsg] = useState("");
+
+  const handleDelete = async () => {
+    if (!confirmDelete) return;
+    setDeleting(true);
+    setDelMsg("");
+    try {
+      const marker = "/object/public/equipment-images/";
+      const { data: eq } = await supabase.from("equipment").select("image_path").eq("id", confirmDelete.equipment_id).single();
+      const { error } = await supabase.from("equipment").delete().eq("id", confirmDelete.equipment_id);
+      if (error) throw error;
+      const img = eq?.image_path || "";
+      if (img.includes(marker)) {
+        try {
+          const obj = decodeURIComponent(img.split(marker)[1]);
+          await supabase.storage.from("equipment-images").remove([obj]);
+        } catch {}
+      }
+      setConfirmDelete(null);
+      await fetchStatus();
+    } catch (err: any) {
+      if (err?.code === "23503" || String(err?.message || "").includes("foreign key")) {
+        setDelMsg("لا يمكن حذف معدة مرتبطة بحجوزات سابقة — يمكنك تعديلها أو إخفاؤها بدل حذفها.");
+      } else {
+        setDelMsg("تعذر حذف المعدة");
+      }
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const fetchStatus = async () => {
     setLoading(true);
@@ -158,6 +194,7 @@ export default function EquipmentInside() {
                 <th className="px-4 py-3">خارج</th>
                 <th className="px-4 py-3">تالف</th>
                 <th className="px-4 py-3">مفقود</th>
+                <th className="px-4 py-3">إجراءات</th>
               </tr>
             </thead>
             <tbody>
@@ -209,10 +246,54 @@ export default function EquipmentInside() {
                       {e.missing}
                     </span>
                   </td>
+                  <td className="px-4 py-3">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => navigate(`/admin/equipment/edit/${e.equipment_id}`)}
+                        className="flex items-center gap-1 rounded-lg border border-white/15 px-2.5 py-1.5 text-xs text-gray-300 hover:bg-white/5"
+                      >
+                        <Pencil size={13} />
+                        تعديل
+                      </button>
+                      <button
+                        onClick={() => setConfirmDelete(e)}
+                        className="flex items-center gap-1 rounded-lg bg-red-500/15 px-2.5 py-1.5 text-xs text-red-300 hover:bg-red-500/25"
+                      >
+                        <Trash2 size={13} />
+                        حذف
+                      </button>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {delMsg && (
+        <div className="mb-4 rounded-lg bg-red-500/15 px-4 py-3 text-sm text-red-300">{delMsg}</div>
+      )}
+
+      {confirmDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-md rounded-xl border border-white/10 bg-gray-900 p-6">
+            <h3 className="mb-2 flex items-center gap-2 text-lg font-bold text-red-400">
+              <AlertTriangle size={20} />
+              تأكيد حذف المعدة
+            </h3>
+            <p className="text-sm text-gray-400">
+              سيتم حذف «{confirmDelete.name}» نهائياً. إذا كانت مرتبطة بحجوزات سابقة فلن يسمح النظام بالحذف.
+            </p>
+            <div className="mt-4 flex justify-end gap-3">
+              <button onClick={() => setConfirmDelete(null)} className="rounded-lg border border-white/15 px-4 py-2 text-sm text-gray-300 hover:bg-white/5">
+                إلغاء
+              </button>
+              <button onClick={handleDelete} disabled={deleting} className="rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-50">
+                {deleting ? "جاري الحذف…" : "حذف نهائي"}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </AdminLayout>
