@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { toWesternDigits } from "../lib/digits";
 import { useNavigate } from "react-router-dom";
 import { Loader2, User, Phone, CalendarDays, Package, Eye } from "lucide-react";
 import AdminLayout from "../components/AdminLayout";
@@ -63,7 +64,7 @@ export default function ReturnsList() {
                 <tr key={r.id} className="border-t border-white/5 hover:bg-white/5">
                   <td className="px-4 py-3 font-medium">{r.booking_number}</td>
                   <td className="px-4 py-3"><span className="flex items-center gap-2"><User size={14} className="text-gray-500" />{r.customer_name || "—"}</span></td>
-                  <td className="px-4 py-3"><span className="flex items-center gap-2"><Phone size={14} className="text-gray-500" />{r.customer_phone || "—"}</span></td>
+                  <td className="px-4 py-3"><span className="flex items-center gap-2"><Phone size={14} className="text-gray-500" />{toWesternDigits(r.customer_phone) || "—"}</span></td>
                   <td className="px-4 py-3"><span className="flex items-center gap-2"><CalendarDays size={14} className="text-gray-500" />{new Date(r.expected_return_at).toLocaleDateString("ar-EG-u-nu-latn")}</span></td>
                   <td className="px-4 py-3"><button onClick={() => navigate(`/admin/returns/${r.id}`)} className="flex items-center gap-1 rounded-lg bg-accent/15 px-3 py-1.5 text-xs font-medium text-accent hover:bg-accent/25"><Eye size={14} />تفاصيل</button></td>
                 </tr>

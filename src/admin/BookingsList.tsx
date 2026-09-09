@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { toWesternDigits } from "../lib/digits";
 import { useNavigate } from "react-router-dom";
 import {
   Loader2,
@@ -81,7 +82,7 @@ export default function BookingsList() {
     const matchesSearch =
       !q ||
       (b.customer_name || "").toLowerCase().includes(q) ||
-      (b.customer_phone || "").toLowerCase().includes(q) ||
+      (toWesternDigits(b.customer_phone) || "").toLowerCase().includes(toWesternDigits(q)) ||
       b.booking_number.toLowerCase().includes(q);
     return matchesStatus && matchesSearch;
   });
@@ -152,7 +153,7 @@ export default function BookingsList() {
                   <td className="px-4 py-3">
                     <span className="flex items-center gap-2">
                       <Phone size={14} className="text-gray-500" />
-                      {b.customer_phone || "—"}
+                      {toWesternDigits(b.customer_phone) || "—"}
                     </span>
                   </td>
                   <td className="px-4 py-3">

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { toWesternDigits } from "../lib/digits";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowRight,
@@ -301,7 +302,7 @@ export default function BookingDetail() {
 
         <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Info icon={<User size={18} />} label="الاسم" value={booking.customer_name || "—"} />
-          <Info icon={<Phone size={18} />} label="الهاتف" value={booking.customer_phone || "—"} />
+          <Info icon={<Phone size={18} />} label="الهاتف" value={toWesternDigits(booking.customer_phone) || "—"} />
           <Info
             icon={<CalendarDays size={18} />}
             label="فترة الإيجار"

@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { toWesternDigits } from "../lib/digits";
 import { useNavigate } from "react-router-dom";
 import {
   Loader2,
@@ -84,7 +85,7 @@ export default function EquipmentOutside() {
     return (
       !q ||
       (a.customer_name || "").toLowerCase().includes(q) ||
-      a.customer_phone?.toLowerCase().includes(q) ||
+      toWesternDigits(a.customer_phone).toLowerCase().includes(toWesternDigits(q)) ||
       a.booking_number.toLowerCase().includes(q) ||
       a.equipment_name.toLowerCase().includes(q)
     );
@@ -188,7 +189,7 @@ export default function EquipmentOutside() {
                       </span>
                       <span className="mt-0.5 flex items-center gap-2 text-xs text-gray-500">
                         <Phone size={12} className="text-gray-500" />
-                        {a.customer_phone || "—"}
+                        {toWesternDigits(a.customer_phone) || "—"}
                       </span>
                     </div>
                   </td>

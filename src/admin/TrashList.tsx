@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+import { toWesternDigits } from "../lib/digits";
 import { Trash2, RotateCcw, Loader2, AlertTriangle, Inbox, RefreshCw, X } from "lucide-react";
 import AdminLayout from "../components/AdminLayout";
 
@@ -138,7 +139,7 @@ export default function TrashList() {
                   <td className="p-4 font-semibold text-accent">{b.booking_number}</td>
                   <td className="p-4">{b.customer_name || "—"}</td>
                   <td className="p-4" dir="ltr">
-                    {b.customer_phone || "—"}
+                    {toWesternDigits(b.customer_phone) || "—"}
                   </td>
                   <td className="p-4">{STATUS_LABELS[b.status] ?? b.status}</td>
                   <td className="p-4 text-gray-400">
