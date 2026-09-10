@@ -349,12 +349,12 @@ export default function NewBookingWizardV2() {
         {/* Rental period */}
         <section className="space-y-4">
           <h3 className="flex items-center gap-2 text-sm font-bold text-accent">
-            <CalendarDays size={16} /> فترة الإيجار
+            <CalendarDays size={16} /> تاريخ أخذ المعدات
           </h3>
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="mb-2 block text-sm font-semibold text-gray-300">
-                تاريخ بداية الإيجار
+                تاريخ أخذ المعدات
               </label>
               <input
                 type="date"
@@ -373,21 +373,9 @@ export default function NewBookingWizardV2() {
                 className="w-full rounded-lg border border-gray-700 bg-gray-900/60 px-4 py-2.5 text-white outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/30"
               />
             </div>
-            <div>
-              <label className="mb-2 block text-sm font-semibold text-gray-300">
-                تاريخ نهاية الإيجار
-              </label>
-              <input
-                type="date"
-                min={sd ? new Date(new Date(sd).getTime() + 86400000).toISOString().split("T")[0] : today}
-                value={ed ?? ""}
-                onChange={(e) => {
-                  setEd(e.target.value || null);
-                  if (err) setErr(null);
-                }}
-                className="w-full rounded-lg border border-gray-700 bg-gray-900/60 px-4 py-2.5 text-white outline-none transition focus:border-accent focus:ring-2 focus:ring-accent/30"
-              />
-            </div>
+            <p className="text-xs text-gray-500 md:col-span-2">
+              يُحتسب الإرجاع تلقائياً لليوم التالي، ويُتفق على الموعد النهائي مع الإدارة عند التسليم.
+            </p>
           </div>
         </section>
 

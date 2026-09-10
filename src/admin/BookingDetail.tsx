@@ -112,6 +112,61 @@ export default function BookingDetail() {
   const [replaceFile, setReplaceFile] = useState<File | null>(null);
   const [replacePreview, setReplacePreview] = useState<string | null>(null);
   const [showDelete, setShowDelete] = useState(false);
+  const [depAmount, setDepAmount] = useState("");
+  const [savingDep, setSavingDep] = useState(false);
+  const [balancePaid, setBalancePaid] = useState("");
+
+  useEffect(() => {
+    if (depositPayment) setDepAmount(String(depositPayment.amount));
+  }, [depositPayment]);
+
+  useEffect(() => {
+    if (booking && booking.remaining_amount > 0) setBalancePaid(String(booking.remaining_amount));
+  }, [booking?.id, booking?.remaining_amount]);
+
+  const saveDepositAmount = async () => {
+    const v = Number(depAmount);
+    if (!booking || !depositPayment || !Number.isFinite(v) || v <= 0) return;
+    setSavingDep(true);
+    setMsg(null);
+    try {
+      const { error: payErr } = await supabase
+        .from("payments")
+        .update({ amount: v })
+        .eq("id", depositPayment.id);
+      if (payErr) throw payErr;
+      const { error: bkErr } = await supabase
+        .from("bookings")
+        .update({
+          deposit_required: v,
+          remaining_amount: Math.max(0, booking.subtotal - v),
+        })
+        .eq("id", booking.id);
+      if (bkErr) throw bkErr;
+      setMsg({ type: "ok", text: "تم تحديث مبلغ العربون حسب الوصل" });
+      setTimeout(() => window.location.reload(), 800);
+    } catch {
+      setSavingDep(false);
+      setMsg({ type: "err", text: "تعذر تحديث المبلغ" });
+    }
+  };
+
+  const recordBalance = async () => {
+    const v = Number(balancePaid);
+    if (!booking || !Number.isFinite(v) || v <= 0) return;
+    setMsg(null);
+    setActing("record-balance-payment");
+    const { error } = await supabase.functions.invoke("record-balance-payment", {
+      body: { bookingId, amount: v },
+    });
+    setActing(null);
+    if (error) {
+      setMsg({ type: "err", text: "تعذر تسجيل دفعة الرصيد" });
+      return;
+    }
+    setMsg({ type: "ok", text: "تم تسجيل الدفعة النقدية بنجاح" });
+    setTimeout(() => window.location.reload(), 900);
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -380,6 +435,68 @@ export default function BookingDetail() {
             </p>
           )}
         </div>
+
+        {pendingReview && depositPayment && (
+          <div className="mt-6 rounded-lg border border-warning/30 bg-warning/5 p-4">
+            <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-warning">
+              <Banknote size={16} />
+              مبلغ العربون المكتوب في الوصل
+            </h3>
+            <p className="mb-3 text-xs text-gray-400">
+              المحسوب آلياً: {fmt(booking.deposit_required)} دج — عدّله ليطابق المبلغ المدفوع فعلياً في الوصل قبل الاعتماد.
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <input
+                type="number"
+                min={0}
+                value={depAmount}
+                onChange={(e) => setDepAmount(e.target.value)}
+                className="w-40 rounded-lg border border-white/10 bg-white/5 p-2.5 text-sm outline-none focus:border-accent"
+              />
+              <span className="text-xs text-gray-500">دج</span>
+              <button
+                onClick={saveDepositAmount}
+                disabled={savingDep || !(Number(depAmount) > 0)}
+                className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-gray-900 hover:bg-accent/90 disabled:opacity-50"
+              >
+                {savingDep ? "جاري الحفظ…" : "حفظ المبلغ"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {canRecordBalance && (
+          <div className="mt-6 rounded-lg border border-info/30 bg-info/5 p-4">
+            <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-info">
+              <Banknote size={16} />
+              دفعة الرصيد النقدية عند أخذ المعدات
+            </h3>
+            <p className="mb-3 text-xs text-gray-400">
+              المتبقي حالياً: {fmt(booking.remaining_amount)} دج — أدخل المبلغ الذي دفعه العميل نقداً الآن (يمكن دفعه على أقساط).
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <input
+                type="number"
+                min={1}
+                max={booking.remaining_amount}
+                value={balancePaid}
+                onChange={(e) => setBalancePaid(e.target.value)}
+                className="w-40 rounded-lg border border-white/10 bg-white/5 p-2.5 text-sm outline-none focus:border-accent"
+              />
+              <span className="text-xs text-gray-500">دج</span>
+              <span className="rounded-lg bg-white/5 px-3 py-2 text-xs text-gray-300">
+                يتبقى بعد الدفع: {fmt(Math.max(0, booking.remaining_amount - (Number(balancePaid) || 0)))} دج
+              </span>
+              <button
+                onClick={recordBalance}
+                disabled={acting === "record-balance-payment" || !(Number(balancePaid) > 0)}
+                className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-gray-900 hover:bg-accent/90 disabled:opacity-50"
+              >
+                {acting === "record-balance-payment" ? "جاري التسجيل…" : "تسجيل الدفعة"}
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="mt-6 flex flex-wrap gap-3">
           {pendingReview && (

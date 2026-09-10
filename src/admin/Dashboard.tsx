@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   AlertCircle,
   DollarSign,
+  TrendingUp,
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import AdminLayout from "../components/AdminLayout";
@@ -24,6 +25,7 @@ interface Stat {
 export default function AdminDashboard() {
   const [stats, setStats] = useState<Stat[]>([]);
   const [loading, setLoading] = useState(true);
+  const [revenue, setRevenue] = useState({ total: 0, month: 0, completed: 0 });
 
   useEffect(() => {
     const load = async () => {
@@ -45,6 +47,21 @@ export default function AdminDashboard() {
           .select("id", { count: "exact", head: true })
           .eq("status", "RETURN_PENDING"),
       ]);
+      const { data: pays } = await supabase
+        .from("payments")
+        .select("amount,created_at")
+        .eq("status", "VERIFIED");
+      const all = (pays || []) as { amount: number; created_at: string }[];
+      const monthPrefix = new Date().toISOString().slice(0, 7);
+      const totalRev = all.reduce((s, p) => s + (p.amount || 0), 0);
+      const monthRev = all
+        .filter((p) => (p.created_at || "").slice(0, 7) === monthPrefix)
+        .reduce((s, p) => s + (p.amount || 0), 0);
+      const { count: completedCount } = await supabase
+        .from("bookings")
+        .select("id", { count: "exact", head: true })
+        .eq("status", "COMPLETED");
+      setRevenue({ total: totalRev, month: monthRev, completed: completedCount ?? 0 });
 
       setStats([
         {
@@ -113,6 +130,30 @@ export default function AdminDashboard() {
           ))}
         </div>
       )}
+
+      <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="rounded-xl border border-accent/30 bg-accent/10 p-5">
+          <div className="flex items-center justify-between">
+            <DollarSign className="text-accent" size={24} />
+            <span className="text-2xl font-bold text-accent">{revenue.total.toLocaleString("en-US")}</span>
+          </div>
+          <p className="mt-3 text-sm text-gray-300">إجمالي الإيرادات المحصلة (دج)</p>
+        </div>
+        <div className="rounded-xl border border-success/30 bg-success/10 p-5">
+          <div className="flex items-center justify-between">
+            <TrendingUp className="text-success" size={24} />
+            <span className="text-2xl font-bold text-success">{revenue.month.toLocaleString("en-US")}</span>
+          </div>
+          <p className="mt-3 text-sm text-gray-300">إيرادات هذا الشهر (دج)</p>
+        </div>
+        <div className="rounded-xl border border-white/10 bg-white/5 p-5">
+          <div className="flex items-center justify-between">
+            <CheckCircle2 className="text-gray-300" size={24} />
+            <span className="text-2xl font-bold">{revenue.completed}</span>
+          </div>
+          <p className="mt-3 text-sm text-gray-300">حجوزات مكتملة</p>
+        </div>
+      </div>
 
       <div className="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <QuickLink

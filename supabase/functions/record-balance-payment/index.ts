@@ -27,7 +27,7 @@ Deno.serve(async (req) => {
     return auth.response;
   }
 
-  const { bookingId } = await req.json();
+  const { bookingId, amount } = await req.json();
 
   if (!bookingId) {
     return new Response(
@@ -102,6 +102,7 @@ Deno.serve(async (req) => {
   const { data: paymentId, error: rpcError } = await supabase.rpc('record_balance_payment', {
     p_booking_id: bookingId,
     p_admin_id: auth.user.id,
+    p_amount: typeof amount === "number" && amount > 0 ? Math.floor(amount) : null,
   });
 
   if (rpcError || !paymentId) {
