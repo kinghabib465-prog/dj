@@ -220,10 +220,10 @@ export default function Calendar() {
                       {dayEvents.slice(0, 2).map(({ b }) => (
                         <span
                           key={b.id}
-                          title={b.booking_number}
-                          className={`rounded-md px-1 py-0.5 text-[9px] font-bold leading-none ${STATUS_CHIP[b.status] ?? "bg-gray-700 text-gray-300"}`}
+                          title={`${b.customer_name || "بدون اسم"} — ${b.booking_number}`}
+                          className={`max-w-full truncate rounded-md px-1 py-0.5 text-[9px] font-bold leading-none ${STATUS_CHIP[b.status] ?? "bg-gray-700 text-gray-300"}`}
                         >
-                          {b.booking_number}
+                          {b.customer_name || b.booking_number}
                         </span>
                       ))}
                       {dayEvents.length > 2 && (
