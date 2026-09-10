@@ -24,8 +24,15 @@ export default function ReturnsDetail() {
 
   useEffect(() => {
     const fetch = async () => {
-      const { data, error } = await supabase.rpc("get_return_items_for_booking", { p_booking_id: bookingId });
+      let { data, error } = await supabase.rpc("get_return_items_for_booking", { p_booking_id: bookingId });
       if (error) { setMsg({ type: "err", text: "تعذر تحميل عناصر الإرجاع" }); setLoading(false); return; }
+      // جلسة الإرجاع غير مبدوءة بعد — يبدأ تلقائياً ليتم الإرجاع في أي وقت (قبل أو بعد الموعد المتوقع)
+      if (!error && (!data || data.length === 0)) {
+        await supabase.rpc("start_equipment_return", { p_booking_id: bookingId });
+        const ref = await supabase.rpc("get_return_items_for_booking", { p_booking_id: bookingId });
+        data = ref.data;
+        error = ref.error;
+      }
       setItems(data ?? []);
       setLoading(false);
     };
@@ -62,7 +69,7 @@ export default function ReturnsDetail() {
       <button onClick={() => navigate("/admin/returns")} className="mb-4 flex items-center gap-1 text-sm text-gray-400 hover:text-white"><ArrowRight size={16} />العودة</button>
       {msg && <div className={`mb-4 rounded-lg px-4 py-3 text-sm ${msg.type === "ok" ? "bg-success/15 text-success" : "bg-red-500/15 text-red-300"}`}>{msg.text}</div>}
       <h1 className="mb-1 text-2xl font-bold">تسجيل الإرجاع</h1>
-      <p className="mb-6 text-sm text-gray-400">الحجز: {bookingId}</p>
+      <p className="mb-6 text-sm text-gray-400">الحجز: {bookingId} — يمكن تسجيل الإرجاع في أي وقت قبل أو بعد الموعد المتوقع.</p>
       <div className="overflow-x-auto rounded-xl border border-white/10">
         <table className="w-full text-right text-sm">
           <thead className="bg-white/5 text-gray-400">

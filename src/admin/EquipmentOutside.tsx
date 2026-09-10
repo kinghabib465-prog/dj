@@ -230,7 +230,7 @@ export default function EquipmentOutside() {
                       className="flex items-center gap-1 rounded-lg bg-accent/15 px-3 py-1.5 text-xs font-medium text-accent transition hover:bg-accent/25"
                     >
                       <Eye size={14} />
-                      تفاصيل
+                      إرجاع / متابعة
                     </button>
                   </td>
                 </tr>
