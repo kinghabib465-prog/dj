@@ -151,19 +151,14 @@ export default function NewBookingWizardV2() {
       return { ...p, [id]: n };
     });
 
-  const days = useMemo(() => {
-    if (!sd || !ed) return 0;
-    const diff = Math.ceil((new Date(ed).getTime() - new Date(sd).getTime()) / 86400000) + 1;
-    return Math.max(1, diff);
-  }, [sd, ed]);
 
   const total = useMemo(
     () =>
       Object.entries(sel).reduce((sum, [id, q]) => {
         const eq = eqs.find((e) => e.id === id);
-        return eq ? sum + q * (eq.rental_price ?? 0) * days : sum;
+        return eq ? sum + q * (eq.rental_price ?? 0) : sum;
       }, 0),
-    [sel, eqs, days]
+    [sel, eqs]
   );
 
   const today = new Date().toISOString().split("T")[0];
@@ -374,7 +369,7 @@ export default function NewBookingWizardV2() {
               />
             </div>
             <p className="text-xs text-gray-500 md:col-span-2">
-              يُحتسب الإرجاع تلقائياً لليوم التالي، ويُتفق على الموعد النهائي مع الإدارة عند التسليم.
+              السعر ثابت يحدده الإدارة (ليس باليوم)، والإرجاع يتم في الموعد المتفق عليه مع الإدارة دون قيود.
             </p>
           </div>
         </section>
@@ -561,12 +556,8 @@ export default function NewBookingWizardV2() {
         </section>
 
         {/* Summary */}
-        {Object.keys(sel).length > 0 && days > 0 && (
+        {Object.keys(sel).length > 0 && (
           <div className="space-y-2 rounded-xl border border-gray-700 bg-gray-900/60 p-4 text-sm">
-            <div className="flex justify-between text-gray-300">
-              <span>عدد الأيام</span>
-              <span className="font-semibold text-white">{days}</span>
-            </div>
             <div className="flex justify-between text-gray-300">
               <span>عدد المعدات المختارة</span>
               <span className="font-semibold text-white">{Object.keys(sel).length}</span>
