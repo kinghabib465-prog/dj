@@ -130,19 +130,12 @@ export default function BookingDetail() {
     setSavingDep(true);
     setMsg(null);
     try {
-      const { error: payErr } = await supabase
-        .from("payments")
-        .update({ amount: v })
-        .eq("id", depositPayment.id);
-      if (payErr) throw payErr;
-      const { error: bkErr } = await supabase
-        .from("bookings")
-        .update({
-          deposit_required: v,
-          remaining_amount: Math.max(0, booking.subtotal - v),
-        })
-        .eq("id", booking.id);
-      if (bkErr) throw bkErr;
+      const { error: rpcErr } = await supabase.rpc("set_deposit_amount", {
+        p_booking_id: booking.id,
+        p_payment_id: depositPayment.id,
+        p_amount: v,
+      });
+      if (rpcErr) throw rpcErr;
       setMsg({ type: "ok", text: "تم تحديث مبلغ العربون حسب الوصل" });
       setTimeout(() => window.location.reload(), 800);
     } catch {
