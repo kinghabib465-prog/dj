@@ -19,6 +19,7 @@ import {
   AlertTriangle,
   Download,
   Upload,
+  StickyNote,
 } from "lucide-react";
 import AdminLayout from "../components/AdminLayout";
 
@@ -36,6 +37,7 @@ interface Booking {
   remaining_amount: number;
   payment_status: string | null;
   event_location: string | null;
+  notes: string | null;
 }
 
 interface Payment {
@@ -115,6 +117,26 @@ export default function BookingDetail() {
   const [depAmount, setDepAmount] = useState("");
   const [savingDep, setSavingDep] = useState(false);
   const [balancePaid, setBalancePaid] = useState("");
+  const [adminNote, setAdminNote] = useState("");
+  const [savingNote, setSavingNote] = useState(false);
+
+  useEffect(() => {
+    if (booking) setAdminNote(booking.notes || "");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [booking?.id]);
+
+  const saveAdminNote = async () => {
+    if (!booking) return;
+    setSavingNote(true);
+    setMsg(null);
+    const { error } = await supabase.from("bookings").update({ notes: adminNote.trim() }).eq("id", booking.id);
+    setSavingNote(false);
+    if (error) {
+      setMsg({ type: "err", text: "تعذر حفظ الملاحظة" });
+      return;
+    }
+    setMsg({ type: "ok", text: "تم حفظ الملاحظة" });
+  };
 
   useEffect(() => {
     if (depositPayment) setDepAmount(String(depositPayment.amount));
@@ -532,6 +554,27 @@ export default function BookingDetail() {
               حذف نهائي
             </Action>
           )}
+        <div className="mt-6 rounded-xl border border-white/10 bg-white/5 p-4">
+          <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-300">
+            <StickyNote size={16} className="text-accent" />
+            ملاحظة الأدمن
+          </h3>
+          <textarea
+            value={adminNote}
+            onChange={(e) => setAdminNote(e.target.value)}
+            placeholder="اكتب ملاحظة حول الحجز (للمتابعة الداخلية فقط)…"
+            rows={2}
+            className="w-full rounded-lg border border-white/10 bg-white/5 p-3 text-sm outline-none focus:border-accent"
+          />
+          <button
+            onClick={saveAdminNote}
+            disabled={savingNote}
+            className="mt-2 flex items-center gap-2 rounded-lg border border-white/15 px-4 py-2 text-sm text-gray-300 hover:bg-white/5 disabled:opacity-50"
+          >
+            {savingNote ? "جاري الحفظ…" : "حفظ الملاحظة"}
+          </button>
+        </div>
+
         </div>
       </div>
 

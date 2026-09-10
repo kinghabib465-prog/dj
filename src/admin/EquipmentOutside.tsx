@@ -47,6 +47,8 @@ export default function EquipmentOutside() {
   const [search, setSearch] = useState("");
   const [refreshing, setRefreshing] = useState(false);
   const navigate = useNavigate();
+  const [acting, setActing] = useState<string | null>(null);
+  const [actMsg, setActMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
   const fetchAssignments = async () => {
     setLoading(true);
@@ -65,6 +67,30 @@ export default function EquipmentOutside() {
     fetchAssignments();
   }, []);
 
+  const markReturned = async (b: OutsideAssignment) => {
+    setActing(b.booking_id);
+    setActMsg(null);
+    try {
+      await supabase.rpc("start_equipment_return", { p_booking_id: b.booking_id });
+      const { data: items } = await supabase.rpc("get_return_items_for_booking", { p_booking_id: b.booking_id });
+      for (const it of (items || [])) {
+        await supabase.rpc("upsert_return_item", {
+          p_return_item_id: it.id,
+          p_returned_good_quantity: it.expected_quantity,
+          p_damaged_quantity: 0,
+          p_missing_quantity: 0,
+          p_remaining_out_quantity: 0,
+        });
+      }
+      await supabase.rpc("maybe_complete_return", { p_booking_id: b.booking_id });
+      setActing(null);
+      setActMsg({ ok: true, text: `تم تسجيل إرجاع الحجز ${b.booking_number} بنجاح` });
+      await fetchAssignments();
+    } catch {
+      setActing(null);
+      setActMsg({ ok: false, text: "تعذر تسجيل الإرجاع — تحقق من معدات الحجز" });
+    }
+  };
   const handleRefresh = async () => {
     setRefreshing(true);
     await fetchAssignments();
@@ -130,6 +156,11 @@ export default function EquipmentOutside() {
       )}
 
       {/* Stats */}
+      {actMsg && (
+        <div className={"mb-4 rounded-lg px-4 py-3 text-sm " + (actMsg.ok ? "bg-success/15 text-success" : "bg-red-500/15 text-red-300")}>
+          {actMsg.text}
+        </div>
+      )}
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((s) => (
           <div key={s.label} className="flex items-center gap-4 rounded-xl border border-white/10 bg-white/5 p-5">
@@ -224,6 +255,14 @@ export default function EquipmentOutside() {
                       {STATUS_LABELS[a.status] ?? a.status}
                     </span>
                   </td>
+                    <button
+                      onClick={() => markReturned(a)}
+                      disabled={acting === a.booking_id}
+                      className="flex items-center gap-1 rounded-lg bg-success/15 px-3 py-1.5 text-xs font-medium text-success transition hover:bg-success/25 disabled:opacity-50"
+                    >
+                      <CheckCircle2 size={14} />
+                      {acting === a.booking_id ? "جاري…" : "تم الارجاع"}
+                    </button>
                   <td className="px-4 py-3">
                     <button
                       onClick={() => navigate(`/admin/returns/${a.booking_id}`)}
