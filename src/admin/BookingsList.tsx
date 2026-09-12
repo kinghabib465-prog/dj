@@ -13,6 +13,7 @@ import {
   Filter,
 } from "lucide-react";
 import AdminLayout from "../components/AdminLayout";
+import { STATUS_LABELS, STATUS_BADGE as STATUS_COLORS } from "../domain/bookingWorkflow";
 
 interface Booking {
   id: string;
@@ -26,30 +27,6 @@ interface Booking {
   deposit_paid: number;
   remaining_amount: number;
 }
-
-const STATUS_LABELS: Record<string, string> = {
-  PENDING_PAYMENT_REVIEW: "بانتظار مراجعة الدفع",
-  CONFIRMED: "مؤكد",
-  READY_FOR_PICKUP: "جاهز للتسليم",
-  EQUIPMENT_OUT: "معدات مسلمة",
-  RETURN_PENDING: "بانتظار الإرجاع",
-  COMPLETED: "مكتمل",
-  PAYMENT_REJECTED: "دفع مرفوض",
-  CANCELLED: "ملغي",
-  EXPIRED: "منتهي",
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  PENDING_PAYMENT_REVIEW: "bg-warning/15 text-warning",
-  CONFIRMED: "bg-success/15 text-success",
-  READY_FOR_PICKUP: "bg-info/15 text-info",
-  EQUIPMENT_OUT: "bg-blue-500/15 text-blue-300",
-  RETURN_PENDING: "bg-purple-500/15 text-purple-300",
-  COMPLETED: "bg-gray-500/15 text-gray-300",
-  PAYMENT_REJECTED: "bg-red-500/15 text-red-300",
-  CANCELLED: "bg-gray-500/15 text-gray-400",
-  EXPIRED: "bg-gray-500/15 text-gray-400",
-};
 
 const fmt = (n: number) => (Number.isFinite(n) ? n.toLocaleString("en-US") : "0");
 

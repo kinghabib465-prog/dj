@@ -67,15 +67,14 @@ Deno.serve(async (req) => {
     );
   }
 
-  if (
-    booking.status !==
-      "READY_FOR_PICKUP" ||
-    booking.remaining_amount > 0
-  ) {
+  // Handover is a physical event: an outstanding balance must not block it.
+  // The balance is reported back so the UI can warn and record the payment.
+  if (booking.status !== "READY_FOR_PICKUP") {
     return new Response(
       JSON.stringify({
-        error:
-          "Booking not ready for handover",
+        error: "Booking not ready for handover",
+        reason: "INVALID_STATUS",
+        details: { status: booking.status },
       }),
       {
         status: 400,
@@ -136,6 +135,7 @@ Deno.serve(async (req) => {
       bookingId,
       bookingStatus: booking?.status,
       remainingAmount: booking?.remaining_amount,
+      hasOutstandingBalance: (booking?.remaining_amount ?? 0) > 0,
     }),
     {
       status: 200,

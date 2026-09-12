@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabase";
 import { toWesternDigits } from "../lib/digits";
 import { Trash2, RotateCcw, Loader2, AlertTriangle, Inbox, RefreshCw, X } from "lucide-react";
 import AdminLayout from "../components/AdminLayout";
+import { STATUS_LABELS } from "../domain/bookingWorkflow";
 
 interface TrashedBooking {
   id: string;
@@ -13,18 +14,6 @@ interface TrashedBooking {
   deleted_at: string | null;
   completed_at: string | null;
 }
-
-const STATUS_LABELS: Record<string, string> = {
-  PENDING_PAYMENT_REVIEW: "بانتظار مراجعة الدفع",
-  CONFIRMED: "مؤكد",
-  READY_FOR_PICKUP: "جاهز للتسليم",
-  EQUIPMENT_OUT: "معدات مسلمة",
-  RETURN_PENDING: "بانتظار الإرجاع",
-  COMPLETED: "مكتمل",
-  PAYMENT_REJECTED: "دفع مرفوض",
-  CANCELLED: "ملغي",
-  EXPIRED: "منتهي",
-};
 
 export default function TrashList() {
   const [items, setItems] = useState<TrashedBooking[]>([]);

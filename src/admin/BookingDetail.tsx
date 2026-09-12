@@ -22,6 +22,16 @@ import {
   StickyNote,
 } from "lucide-react";
 import AdminLayout from "../components/AdminLayout";
+import {
+  STATUS_LABELS,
+  STATUS_BADGE,
+  getAllowedActions,
+  getNextStepHint,
+  blockingReason,
+  actionLabel,
+  type BookingAction,
+  type BookingFlags,
+} from "../domain/bookingWorkflow";
 
 interface Booking {
   id: string;
@@ -49,26 +59,6 @@ interface Payment {
   receipt_path: string | null;
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  PENDING_PAYMENT_REVIEW: "بانتظار مراجعة الدفع",
-  CONFIRMED: "مؤكد",
-  READY_FOR_PICKUP: "جاهز للتسليم",
-  EQUIPMENT_OUT: "معدات مسلمة",
-  RETURN_PENDING: "بانتظار الإرجاع",
-  COMPLETED: "مكتمل",
-  PAYMENT_REJECTED: "دفع مرفوض",
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  PENDING_PAYMENT_REVIEW: "bg-warning/15 text-warning",
-  CONFIRMED: "bg-success/15 text-success",
-  READY_FOR_PICKUP: "bg-info/15 text-info",
-  EQUIPMENT_OUT: "bg-blue-500/15 text-blue-300",
-  RETURN_PENDING: "bg-purple-500/15 text-purple-300",
-  COMPLETED: "bg-gray-500/15 text-gray-300",
-  PAYMENT_REJECTED: "bg-red-500/15 text-red-300",
-};
-
 const fmt = (n: number) => (Number.isFinite(n) ? n.toLocaleString("en-US") : "0");
 
 export default function BookingDetail() {
@@ -80,6 +70,20 @@ export default function BookingDetail() {
   const [msg, setMsg] = useState<{ type: "ok" | "err"; text: string } | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [showReject, setShowReject] = useState(false);
+  const [outsideQuantity, setOutsideQuantity] = useState(0);
+  const [unresolvedMissingCount, setUnresolvedMissingCount] = useState(0);
+  const [showEdit, setShowEdit] = useState(false);
+  const [adjustAmount, setAdjustAmount] = useState("");
+  const [adjustReason, setAdjustReason] = useState("");
+  const [refundAmount, setRefundAmount] = useState("");
+  const [refundNote, setRefundNote] = useState("");
+  const [editForm, setEditForm] = useState({
+    customer_name: "",
+    customer_phone: "",
+    rental_start_at: "",
+    expected_return_at: "",
+    event_location: "",
+  });
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -101,6 +105,15 @@ export default function BookingDetail() {
         .eq("booking_id", bookingId)
         .order("created_at", { ascending: true });
       setPayments(payData || []);
+
+      // Server-side truth for the workflow flags used by getAllowedActions.
+      const [outsideRes, missingRes] = await Promise.all([
+        supabase.rpc("get_equipment_outside_quantity", { p_booking_id: bookingId }),
+        supabase.rpc("get_unresolved_missing_count", { p_booking_id: bookingId }),
+      ]);
+      setOutsideQuantity(Number(outsideRes.data) || 0);
+      setUnresolvedMissingCount(Number(missingRes.data) || 0);
+
       setLoading(false);
     };
     if (bookingId) fetch();
@@ -123,6 +136,17 @@ export default function BookingDetail() {
   useEffect(() => {
     if (booking) setAdminNote(booking.notes || "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [booking?.id]);
+
+  useEffect(() => {
+    if (!booking) return;
+    setEditForm({
+      customer_name: booking.customer_name || "",
+      customer_phone: booking.customer_phone || "",
+      rental_start_at: booking.rental_start_at ? booking.rental_start_at.slice(0, 16) : "",
+      expected_return_at: booking.expected_return_at ? booking.expected_return_at.slice(0, 16) : "",
+      event_location: booking.event_location || "",
+    });
   }, [booking?.id]);
 
   const saveAdminNote = async () => {
@@ -254,6 +278,118 @@ export default function BookingDetail() {
     }
   };
 
+  const acceptRequest = async () => {
+    const dep = payments.find((p) => p.type === "DEPOSIT");
+    if (!dep) {
+      setMsg({ type: "err", text: "لا يوجد دفع عربون لهذا الحجز" });
+      return;
+    }
+    setMsg(null);
+    setActing("verify-payment");
+    const { error } = await supabase.functions.invoke("verify-payment", {
+      body: { bookingId, paymentId: dep.id, action: "APPROVE", rejectionReason: null },
+    });
+    setActing(null);
+    if (error) {
+      setMsg({ type: "err", text: "تعذر قبول الطلب" });
+      return;
+    }
+    setMsg({ type: "ok", text: "تم قبول الطلب" });
+    setTimeout(() => window.location.reload(), 900);
+  };
+
+  const rejectAndDelete = async () => {
+    if (!rejectReason.trim()) {
+      setMsg({ type: "err", text: "أدخل سبب الرفض" });
+      return;
+    }
+    setMsg(null);
+    setActing("reject-and-delete");
+    try {
+      const { data, error } = await supabase.rpc("reject_and_delete_booking", {
+        p_booking_id: bookingId,
+        p_reason: rejectReason.trim(),
+      });
+      if (error) throw error;
+      const path = typeof data === "string" ? data : "";
+      if (path) await supabase.storage.from("booking-receipts").remove([path]);
+      setShowReject(false);
+      setMsg({ type: "ok", text: "تم رفض الطلب وحذفه" });
+      setTimeout(() => navigate("/admin/bookings"), 700);
+    } catch {
+      setActing(null);
+      setMsg({ type: "err", text: "تعذر رفض الطلب" });
+    }
+  };
+
+  const saveBookingDetails = async () => {
+    if (!booking) return;
+    setMsg(null);
+    setActing("update-details");
+    try {
+      const { error } = await supabase.rpc("update_booking_details", {
+        p_booking_id: booking.id,
+        p_customer_name: editForm.customer_name.trim() || null,
+        p_customer_phone: editForm.customer_phone.trim() || null,
+        p_rental_start_at: editForm.rental_start_at || null,
+        p_expected_return_at: editForm.expected_return_at || null,
+        p_event_location: editForm.event_location.trim() || null,
+      });
+      if (error) throw error;
+      setShowEdit(false);
+      setMsg({ type: "ok", text: "تم تحديث بيانات الطلب" });
+      setTimeout(() => window.location.reload(), 800);
+    } catch {
+      setActing(null);
+      setMsg({ type: "err", text: "تعذر تحديث البيانات" });
+    }
+  };
+
+  const savePriceAdjustment = async () => {
+    const delta = Number(adjustAmount);
+    if (!booking || !Number.isFinite(delta) || delta === 0) return;
+    setMsg(null);
+    setActing("adjust-price");
+    try {
+      const { error } = await supabase.rpc("adjust_booking_price", {
+        p_booking_id: booking.id,
+        p_delta_amount: delta,
+        p_reason: adjustReason.trim() || null,
+      });
+      if (error) throw error;
+      setAdjustAmount("");
+      setAdjustReason("");
+      setMsg({ type: "ok", text: "تم تعديل المبلغ" });
+      setTimeout(() => window.location.reload(), 800);
+    } catch {
+      setActing(null);
+      setMsg({ type: "err", text: "تعذر تعديل المبلغ" });
+    }
+  };
+
+  const saveRefund = async () => {
+    const amount = Number(refundAmount);
+    if (!booking || !Number.isFinite(amount) || amount <= 0) return;
+    setMsg(null);
+    setActing("record-refund");
+    try {
+      const { error } = await supabase.rpc("record_refund", {
+        p_booking_id: booking.id,
+        p_amount: amount,
+        p_method: "CASH",
+        p_note: refundNote.trim() || null,
+      });
+      if (error) throw error;
+      setRefundAmount("");
+      setRefundNote("");
+      setMsg({ type: "ok", text: "تم تسجيل الاسترجاع" });
+      setTimeout(() => window.location.reload(), 800);
+    } catch {
+      setActing(null);
+      setMsg({ type: "err", text: "تعذر تسجيل الاسترجاع" });
+    }
+  };
+
   const invokeEdge = async (fn: string) => {
     setMsg(null);
     setActing(fn);
@@ -282,35 +418,6 @@ export default function BookingDetail() {
     setTimeout(() => window.location.reload(), 900);
   };
 
-  const reviewPayment = async (action: "APPROVE" | "REJECT") => {
-    if (action === "REJECT" && !rejectReason.trim()) {
-      setMsg({ type: "err", text: "أدخل سبب الرفض" });
-      return;
-    }
-    setMsg(null);
-    setActing("verify-payment");
-    const dep = payments.find((p) => p.type === "DEPOSIT");
-    if (!dep) {
-      setMsg({ type: "err", text: "لا يوجد دفع عربون لهذا الحجز" });
-      return;
-    }
-    const { error } = await supabase.functions.invoke("verify-payment", {
-      body: {
-        bookingId,
-        paymentId: dep.id,
-        action,
-        rejectionReason: action === "REJECT" ? rejectReason : null,
-      },
-    });
-    setActing(null);
-    if (error) {
-      setMsg({ type: "err", text: "فشل تنفيذ العملية" });
-      return;
-    }
-    setShowReject(false);
-    setMsg({ type: "ok", text: action === "APPROVE" ? "تم اعتماد الدفع" : "تم رفض الدفع" });
-    setTimeout(() => window.location.reload(), 900);
-  };
 
   if (loading)
     return (
@@ -328,12 +435,25 @@ export default function BookingDetail() {
       </AdminLayout>
     );
 
-  const pendingReview = booking.status === "PENDING_PAYMENT_REVIEW";
-  const canRecordBalance = booking.status === "CONFIRMED" && booking.remaining_amount > 0;
-  const canHandOver = booking.status === "READY_FOR_PICKUP" && booking.remaining_amount === 0;
-  const canStartReturn = booking.status === "EQUIPMENT_OUT";
-  const canComplete = booking.status === "RETURN_PENDING" && booking.remaining_amount === 0;
-  const canTrash = true; // الحذف متاح لجميع الحالات — صلاحية كاملة للأدمن
+  // ---------------------------------------------------------------------------
+  // Workflow permissions — single source of truth in domain/bookingWorkflow.
+  // ---------------------------------------------------------------------------
+  const flags: BookingFlags = {
+    remainingAmount: booking.remaining_amount,
+    outsideQuantity,
+    unresolvedMissingCount,
+    hasDepositPayment: payments.some((p) => p.type === "DEPOSIT"),
+  };
+  const allowed: BookingAction[] = getAllowedActions(booking.status, flags);
+  const isAllowed = (a: BookingAction) => allowed.includes(a);
+  const hint = getNextStepHint(booking.status, flags);
+  const blocker = blockingReason(booking.status, flags);
+
+  // In-page money panels follow the same matrix as the action bar.
+  const canSetDeposit = isAllowed("ACCEPT_REQUEST") && Boolean(depositPayment);
+  const canRecordBalance = isAllowed("RECORD_BALANCE");
+  const canAdjustPrice = isAllowed("ADJUST_PRICE");
+  const canRefund = isAllowed("RECORD_REFUND");
 
   return (
     <AdminLayout>
@@ -363,7 +483,7 @@ export default function BookingDetail() {
           </div>
           <span
             className={`rounded-full px-3 py-1 text-xs font-semibold ${
-              STATUS_COLORS[booking.status] ?? "bg-gray-500/15 text-gray-300"
+              STATUS_BADGE[booking.status] ?? "bg-gray-500/15 text-gray-300"
             }`}
           >
             {STATUS_LABELS[booking.status] ?? booking.status}
@@ -451,11 +571,11 @@ export default function BookingDetail() {
           )}
         </div>
 
-        {pendingReview && depositPayment && (
+        {canSetDeposit && depositPayment && (
           <div className="mt-6 rounded-lg border border-warning/30 bg-warning/5 p-4">
             <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-warning">
               <Banknote size={16} />
-              مبلغ العربون المكتوب في الوصل
+              مبلغ العربون في الوصل
             </h3>
             <p className="mb-3 text-xs text-gray-400">
               المحسوب آلياً: {fmt(booking.deposit_required)} دج — عدّله ليطابق المبلغ المدفوع فعلياً في الوصل قبل الاعتماد.
@@ -484,7 +604,7 @@ export default function BookingDetail() {
           <div className="mt-6 rounded-lg border border-info/30 bg-info/5 p-4">
             <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-info">
               <Banknote size={16} />
-              دفعة الرصيد النقدية عند أخذ المعدات
+              {actionLabel("RECORD_BALANCE")}
             </h3>
             <p className="mb-3 text-xs text-gray-400">
               المتبقي حالياً: {fmt(booking.remaining_amount)} دج — أدخل المبلغ الذي دفعه العميل نقداً الآن (يمكن دفعه على أقساط).
@@ -513,47 +633,128 @@ export default function BookingDetail() {
           </div>
         )}
 
-        <div className="mt-6 flex flex-wrap gap-3">
-          {pendingReview && (
-            <>
-              <Action onClick={() => reviewPayment("APPROVE")} icon={<ThumbsUp size={18} />} disabled={acting === "verify-payment"}>
-                اعتماد الدفع
+        {canAdjustPrice && (
+          <div className="mt-6 rounded-lg border border-info/30 bg-info/5 p-4">
+            <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-info">
+              <Banknote size={16} />
+              {actionLabel("ADJUST_PRICE")}
+            </h3>
+            <p className="mb-3 text-xs text-gray-400">
+              أدخل قيمة موجبة للزيادة أو سالبة للخصم (مثال: -500). يُحدَّث المتبقي تلقائياً.
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <input
+                type="number"
+                value={adjustAmount}
+                onChange={(e) => setAdjustAmount(e.target.value)}
+                placeholder="0"
+                className="w-36 rounded-lg border border-white/10 bg-white/5 p-2.5 text-sm outline-none focus:border-accent"
+              />
+              <span className="text-xs text-gray-500">دج</span>
+              <input
+                value={adjustReason}
+                onChange={(e) => setAdjustReason(e.target.value)}
+                placeholder="سبب التعديل"
+                className="w-56 rounded-lg border border-white/10 bg-white/5 p-2.5 text-sm outline-none focus:border-accent"
+              />
+              <button
+                onClick={savePriceAdjustment}
+                disabled={acting === "adjust-price" || !adjustAmount || Number(adjustAmount) === 0}
+                className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-gray-900 hover:bg-accent/90 disabled:opacity-50"
+              >
+                {acting === "adjust-price" ? "جاري الحفظ..." : "حفظ التعديل"}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {canRefund && (
+          <div className="mt-6 rounded-lg border border-warning/30 bg-warning/5 p-4">
+            <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-warning">
+              <RotateCcw size={16} />
+              {actionLabel("RECORD_REFUND")}
+            </h3>
+            <p className="mb-3 text-xs text-gray-400">
+              يُسجَّل كدفعة من نوع REFUND ولا يمكن أن يتجاوز مجموع المبالغ المحصَّلة فعلياً.
+            </p>
+            <div className="flex flex-wrap items-center gap-3">
+              <input
+                type="number"
+                min={1}
+                value={refundAmount}
+                onChange={(e) => setRefundAmount(e.target.value)}
+                placeholder="المبلغ"
+                className="w-36 rounded-lg border border-white/10 bg-white/5 p-2.5 text-sm outline-none focus:border-accent"
+              />
+              <span className="text-xs text-gray-500">دج</span>
+              <input
+                value={refundNote}
+                onChange={(e) => setRefundNote(e.target.value)}
+                placeholder="ملاحظة (اختياري)"
+                className="w-56 rounded-lg border border-white/10 bg-white/5 p-2.5 text-sm outline-none focus:border-accent"
+              />
+              <button
+                onClick={saveRefund}
+                disabled={acting === "record-refund" || !(Number(refundAmount) > 0)}
+                className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-gray-900 hover:bg-accent/90 disabled:opacity-50"
+              >
+                {acting === "record-refund" ? "جاري التسجيل..." : "تسجيل الاسترجاع"}
+              </button>
+            </div>
+          </div>
+        )}
+
+
+        <div className="mt-6">
+          {hint && (
+            <p className="mb-3 rounded-lg bg-white/5 px-4 py-3 text-sm text-gray-300">{hint}</p>
+          )}
+          {blocker && (
+            <p className="mb-3 rounded-lg bg-warning/15 px-4 py-3 text-sm text-warning">{blocker}</p>
+          )}
+          <div className="flex flex-wrap gap-3">
+            {isAllowed("ACCEPT_REQUEST") && (
+              <Action onClick={acceptRequest} icon={<ThumbsUp size={18} />} disabled={acting === "verify-payment"}>
+                {actionLabel("ACCEPT_REQUEST")}
               </Action>
-              <Action onClick={() => setShowReject(true)} icon={<ThumbsDown size={18} />} ghost disabled={acting === "verify-payment"}>
-                رفض الدفع
+            )}
+            {isAllowed("REJECT_AND_DELETE") && (
+              <Action onClick={() => setShowReject(true)} icon={<ThumbsDown size={18} />} ghost disabled={acting === "reject-and-delete"}>
+                {actionLabel("REJECT_AND_DELETE")}
               </Action>
-            </>
-          )}
-          {canRecordBalance && (
-            <Action onClick={() => invokeEdge("record-balance-payment")} icon={<Banknote size={18} />} disabled={acting === "record-balance-payment"}>
-              تسجيل دفعة الرصيد
-            </Action>
-          )}
-          {canHandOver && (
-            <Action onClick={() => invokeEdge("hand-over-equipment")} icon={<Truck size={18} />} disabled={acting === "hand-over-equipment"}>
-              تسليم المعدات
-            </Action>
-          )}
-          {canStartReturn && (
-            <Action onClick={startReturn} icon={<RotateCcw size={18} />} ghost disabled={acting === "start_equipment_return"}>
-              بدء الإرجاع
-            </Action>
-          )}
-          {canComplete && (
-            <Action onClick={() => invokeEdge("complete-booking")} icon={<CheckCircle2 size={18} />} disabled={acting === "complete-booking"}>
-              إكمال الحجز
-            </Action>
-          )}
-          {canTrash && (
-            <Action onClick={moveToTrash} icon={<Trash2 size={18} />} ghost disabled={acting === "soft-delete"}>
-              نقل إلى السلة
-            </Action>
-          )}
-          {canTrash && (
-            <Action onClick={() => setShowDelete(true)} icon={<Trash2 size={18} />} ghost disabled={acting === "permanent-delete"}>
-              حذف نهائي
-            </Action>
-          )}
+            )}
+            {isAllowed("EDIT_DETAILS") && (
+              <Action onClick={() => setShowEdit(true)} icon={<StickyNote size={18} />} ghost disabled={acting === "update-details"}>
+                {actionLabel("EDIT_DETAILS")}
+              </Action>
+            )}
+            {isAllowed("HAND_OVER") && (
+              <Action onClick={() => invokeEdge("hand-over-equipment")} icon={<Truck size={18} />} disabled={acting === "hand-over-equipment"}>
+                {actionLabel("HAND_OVER")}
+              </Action>
+            )}
+            {isAllowed("START_RETURN") && (
+              <Action onClick={startReturn} icon={<RotateCcw size={18} />} ghost disabled={acting === "start_equipment_return"}>
+                {actionLabel("START_RETURN")}
+              </Action>
+            )}
+            {isAllowed("COMPLETE") && (
+              <Action onClick={() => invokeEdge("complete-booking")} icon={<CheckCircle2 size={18} />} disabled={acting === "complete-booking"}>
+                {actionLabel("COMPLETE")}
+              </Action>
+            )}
+            {isAllowed("MOVE_TO_TRASH") && (
+              <Action onClick={moveToTrash} icon={<Trash2 size={18} />} ghost disabled={acting === "soft-delete"}>
+                {actionLabel("MOVE_TO_TRASH")}
+              </Action>
+            )}
+            {isAllowed("PERMANENT_DELETE") && (
+              <Action onClick={() => setShowDelete(true)} icon={<Trash2 size={18} />} ghost disabled={acting === "permanent-delete"}>
+                {actionLabel("PERMANENT_DELETE")}
+              </Action>
+            )}
+          </div>
+        </div>
         <div className="mt-6 rounded-xl border border-white/10 bg-white/5 p-4">
           <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-300">
             <StickyNote size={16} className="text-accent" />
@@ -575,20 +776,19 @@ export default function BookingDetail() {
           </button>
         </div>
 
-        </div>
       </div>
 
       {showReject && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div className="w-full max-w-md rounded-xl border border-white/10 bg-gray-900 p-6">
-            <h3 className="mb-4 text-lg font-bold">رفض الدفع</h3>
+            <h3 className="mb-4 text-lg font-bold">رفض وحذف الطلب</h3>
             <textarea
               value={rejectReason}
               onChange={(e) => setRejectReason(e.target.value)}
-              placeholder="اكتب سبب رفض الدفع…"
-              rows={3}
+              placeholder="اكتب سبب رفض الطلب..."
               className="w-full rounded-lg border border-white/10 bg-white/5 p-3 text-sm outline-none focus:border-accent"
             />
+            <p className="mt-2 text-xs text-gray-400">سيتم حذف الطلب نهائيا مع مدفوعاته. لا يمكن التراجع.</p>
             <div className="mt-4 flex justify-end gap-3">
               <button
                 onClick={() => setShowReject(false)}
@@ -597,11 +797,11 @@ export default function BookingDetail() {
                 إلغاء
               </button>
               <button
-                onClick={() => reviewPayment("REJECT")}
-                disabled={acting === "verify-payment"}
+                onClick={rejectAndDelete}
+                disabled={acting === "reject-and-delete"}
                 className="rounded-lg bg-red-500 px-4 py-2 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-50"
               >
-                تأكيد الرفض
+                {acting === "reject-and-delete" ? "جاري الحذف..." : "رفض وحذف"}
               </button>
             </div>
           </div>
@@ -659,6 +859,71 @@ export default function BookingDetail() {
           </div>
         </div>
       )}
+
+      {showEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-lg rounded-xl border border-white/10 bg-gray-900 p-6">
+            <h3 className="mb-4 text-lg font-bold">تعديل بيانات الطلب</h3>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="text-xs text-gray-400">
+                اسم العميل
+                <input
+                  value={editForm.customer_name}
+                  onChange={(e) => setEditForm({ ...editForm, customer_name: e.target.value })}
+                  className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 p-2.5 text-sm text-gray-200 outline-none focus:border-accent"
+                />
+              </label>
+              <label className="text-xs text-gray-400">
+                رقم الهاتف
+                <input
+                  value={editForm.customer_phone}
+                  onChange={(e) => setEditForm({ ...editForm, customer_phone: e.target.value })}
+                  className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 p-2.5 text-sm text-gray-200 outline-none focus:border-accent"
+                />
+              </label>
+              <label className="text-xs text-gray-400">
+                بداية الإيجار
+                <input
+                  type="datetime-local"
+                  value={editForm.rental_start_at}
+                  onChange={(e) => setEditForm({ ...editForm, rental_start_at: e.target.value })}
+                  className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 p-2.5 text-sm text-gray-200 outline-none focus:border-accent"
+                />
+              </label>
+              <label className="text-xs text-gray-400">
+                موعد الإرجاع المتوقع
+                <input
+                  type="datetime-local"
+                  value={editForm.expected_return_at}
+                  onChange={(e) => setEditForm({ ...editForm, expected_return_at: e.target.value })}
+                  className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 p-2.5 text-sm text-gray-200 outline-none focus:border-accent"
+                />
+              </label>
+              <label className="text-xs text-gray-400 sm:col-span-2">
+                مكان الحدث
+                <input
+                  value={editForm.event_location}
+                  onChange={(e) => setEditForm({ ...editForm, event_location: e.target.value })}
+                  className="mt-1 w-full rounded-lg border border-white/10 bg-white/5 p-2.5 text-sm text-gray-200 outline-none focus:border-accent"
+                />
+              </label>
+            </div>
+            <div className="mt-4 flex justify-end gap-3">
+              <button onClick={() => setShowEdit(false)} className="rounded-lg border border-white/15 px-4 py-2 text-sm text-gray-300 hover:bg-white/5">
+                إلغاء
+              </button>
+              <button
+                onClick={saveBookingDetails}
+                disabled={acting === "update-details"}
+                className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-gray-900 hover:bg-accent/90 disabled:opacity-50"
+              >
+                {acting === "update-details" ? "جاري الحفظ..." : "حفظ"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </AdminLayout>
   );
 }

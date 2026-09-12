@@ -10,6 +10,7 @@ import {
   Eye,
 } from "lucide-react";
 import AdminLayout from "../components/AdminLayout";
+import { STATUS_LABELS, STATUS_CHIP } from "../domain/bookingWorkflow";
 
 interface BookingEvent {
   id: string;
@@ -20,30 +21,6 @@ interface BookingEvent {
   expected_return_at: string;
   status: string;
 }
-
-const STATUS_LABELS: Record<string, string> = {
-  PENDING_PAYMENT_REVIEW: "بانتظار مراجعة الدفع",
-  CONFIRMED: "مؤكد",
-  READY_FOR_PICKUP: "جاهز للتسليم",
-  EQUIPMENT_OUT: "معدات مسلمة",
-  RETURN_PENDING: "بانتظار الإرجاع",
-  COMPLETED: "مكتمل",
-  PAYMENT_REJECTED: "دفع مرفوض",
-  CANCELLED: "ملغي",
-  EXPIRED: "منتهي",
-};
-
-const STATUS_CHIP: Record<string, string> = {
-  PENDING_PAYMENT_REVIEW: "bg-warning text-gray-900",
-  CONFIRMED: "bg-success text-white",
-  READY_FOR_PICKUP: "bg-info text-white",
-  EQUIPMENT_OUT: "bg-blue-500 text-white",
-  RETURN_PENDING: "bg-purple-500 text-white",
-  COMPLETED: "bg-gray-500 text-white",
-  PAYMENT_REJECTED: "bg-red-500 text-white",
-  CANCELLED: "bg-gray-700 text-gray-300",
-  EXPIRED: "bg-gray-700 text-gray-300",
-};
 
 const WEEKDAYS = ["السبت", "الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
 

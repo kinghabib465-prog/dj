@@ -40,18 +40,15 @@ Deno.serve(async (req) => {
     });
   }
 
-  // Verify completion conditions
-  if (booking.remaining_amount > 0) {
-    return new Response(JSON.stringify({ error: "Outstanding balance" }), {
-      status: 400,
-      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-    });
-  }
+  // Verify completion conditions. The UI hides the button when blocked, but the
+  // server must never trust the client — every reason is machine readable.
+  const reasons: string[] = [];
+
   if (booking.status !== "EQUIPMENT_OUT" && booking.status !== "RETURN_PENDING") {
-    return new Response(JSON.stringify({ error: "Invalid status for completion" }), {
-      status: 400,
-      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-    });
+    reasons.push("INVALID_STATUS");
+  }
+  if (booking.remaining_amount > 0) {
+    reasons.push("OUTSTANDING_BALANCE");
   }
 
   // Check that no equipment is still out (use a helper view or function)
@@ -63,10 +60,7 @@ Deno.serve(async (req) => {
     });
   }
   if (outsideCount && outsideCount > 0) {
-    return new Response(JSON.stringify({ error: "Equipment still out" }), {
-      status: 400,
-      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-    });
+    reasons.push("EQUIPMENT_STILL_OUT");
   }
 
   // Check for unresolved missing items – assume a view returns count
@@ -78,10 +72,26 @@ Deno.serve(async (req) => {
     });
   }
   if (missingCount && missingCount > 0) {
-    return new Response(JSON.stringify({ error: "Unresolved missing items" }), {
-      status: 400,
-      headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
-    });
+    reasons.push("UNRESOLVED_MISSING_ITEMS");
+  }
+
+  if (reasons.length > 0) {
+    return new Response(
+      JSON.stringify({
+        error: "Booking cannot be completed",
+        reason: reasons[0],
+        reasons,
+        details: {
+          remainingAmount: booking.remaining_amount,
+          outsideQuantity: outsideCount ?? 0,
+          unresolvedMissingCount: missingCount ?? 0,
+        },
+      }),
+      {
+        status: 400,
+        headers: { ...getCorsHeaders(req), "Content-Type": "application/json" },
+      },
+    );
   }
 
   const now = new Date().toISOString();

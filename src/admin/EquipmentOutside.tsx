@@ -16,6 +16,7 @@ import {
   Truck,
 } from "lucide-react";
 import AdminLayout from "../components/AdminLayout";
+import { STATUS_LABELS, STATUS_BADGE as STATUS_STYLES } from "../domain/bookingWorkflow";
 
 interface OutsideAssignment {
   booking_id: string;
@@ -29,16 +30,6 @@ interface OutsideAssignment {
   expected_return_at: string;
   status: string;
 }
-
-const STATUS_LABELS: Record<string, string> = {
-  EQUIPMENT_OUT: "معدات مسلمة",
-  RETURN_PENDING: "بانتظار الإرجاع",
-};
-
-const STATUS_STYLES: Record<string, string> = {
-  EQUIPMENT_OUT: "bg-blue-500/15 text-blue-300",
-  RETURN_PENDING: "bg-purple-500/15 text-purple-300",
-};
 
 export default function EquipmentOutside() {
   const [assignments, setAssignments] = useState<OutsideAssignment[]>([]);
