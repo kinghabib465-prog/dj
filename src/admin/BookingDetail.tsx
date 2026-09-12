@@ -4,9 +4,6 @@ import { toWesternDigits } from "../lib/digits";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowRight,
-  User,
-  Phone,
-  CalendarDays,
   Banknote,
   Truck,
   CheckCircle2,
@@ -17,7 +14,6 @@ import {
   Receipt,
   Trash2,
   AlertTriangle,
-  Download,
   Upload,
   StickyNote,
 } from "lucide-react";
@@ -73,6 +69,7 @@ export default function BookingDetail() {
   const [outsideQuantity, setOutsideQuantity] = useState(0);
   const [unresolvedMissingCount, setUnresolvedMissingCount] = useState(0);
   const [showEdit, setShowEdit] = useState(false);
+  const [showMore, setShowMore] = useState(false);
   const [adjustAmount, setAdjustAmount] = useState("");
   const [adjustReason, setAdjustReason] = useState("");
   const [refundAmount, setRefundAmount] = useState("");
@@ -475,11 +472,28 @@ export default function BookingDetail() {
         </div>
       )}
 
-      <div className="rounded-xl border border-white/10 bg-white/5 p-6">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+      {(blocker || hint) && (
+        <div
+          className={`mb-4 rounded-lg px-4 py-2.5 text-sm ${
+            blocker ? "bg-warning/15 text-warning" : "bg-white/5 text-gray-300"
+          }`}
+        >
+          {blocker ?? hint}
+        </div>
+      )}
+
+      <div className="rounded-xl border border-white/10 bg-white/5 p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-xs text-gray-500">رقم الحجز</p>
-            <h1 className="text-2xl font-bold">{booking.booking_number}</h1>
+            <h1 className="text-xl font-bold">{booking.booking_number}</h1>
+            <p className="mt-0.5 text-sm text-gray-400">
+              {booking.customer_name || "—"} · {toWesternDigits(booking.customer_phone) || "—"}
+            </p>
+            <p className="text-xs text-gray-500">
+              {new Date(booking.rental_start_at).toLocaleDateString("ar-EG-u-nu-latn")} →{" "}
+              {new Date(booking.expected_return_at).toLocaleDateString("ar-EG-u-nu-latn")}
+              {booking.event_location ? ` · ${booking.event_location}` : ""}
+            </p>
           </div>
           <span
             className={`rounded-full px-3 py-1 text-xs font-semibold ${
@@ -490,290 +504,281 @@ export default function BookingDetail() {
           </span>
         </div>
 
-        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Info icon={<User size={18} />} label="الاسم" value={booking.customer_name || "—"} />
-          <Info icon={<Phone size={18} />} label="الهاتف" value={toWesternDigits(booking.customer_phone) || "—"} />
-          <Info
-            icon={<CalendarDays size={18} />}
-            label="فترة الإيجار"
-            value={`${new Date(booking.rental_start_at).toLocaleDateString("ar-EG-u-nu-latn")} → ${new Date(booking.expected_return_at).toLocaleDateString("ar-EG-u-nu-latn")}`}
-          />
-          <Info
-            icon={<Banknote size={18} />}
-            label="الإجمالي / المدفوع / المتبقي"
-            value={`${fmt(booking.subtotal)} / ${fmt(booking.deposit_paid)} / ${fmt(booking.remaining_amount)} دج`}
-          />
-          {booking.event_location && (
-            <Info icon={<CalendarDays size={18} />} label="الموقع" value={booking.event_location} />
-          )}
+        <div className="mt-4 flex flex-wrap gap-2 text-xs">
+          <span className="rounded-lg bg-white/5 px-3 py-1.5 text-gray-300">
+            الإجمالي: <b className="text-gray-100">{fmt(booking.subtotal)}</b> دج
+          </span>
+          <span className="rounded-lg bg-white/5 px-3 py-1.5 text-gray-300">
+            المدفوع: <b className="text-gray-100">{fmt(booking.deposit_paid)}</b> دج
+          </span>
+          <span
+            className={`rounded-lg px-3 py-1.5 ${
+              booking.remaining_amount > 0 ? "bg-warning/15 text-warning" : "bg-success/15 text-success"
+            }`}
+          >
+            المتبقي: <b>{fmt(booking.remaining_amount)}</b> دج
+          </span>
         </div>
 
-        {payments.length > 0 && (
-          <div className="mt-6">
-            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-300">
-              <Receipt size={16} className="text-accent" />
-              المدفوعات
+        {(canSetDeposit || isAllowed("REJECT_AND_DELETE")) && (
+          <div className="mt-5 rounded-lg border border-warning/30 bg-warning/5 p-4">
+            <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-warning">
+              <Receipt size={16} />
+              مراجعة الطلب
             </h3>
-            <div className="space-y-2">
-              {payments.map((p) => (
-                <div
-                  key={p.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white/5 px-4 py-2.5 text-sm"
-                >
-                  <span className="text-gray-300">
-                    {p.type === "DEPOSIT" ? "عربون" : p.type === "BALANCE" ? "رصيد" : "إضافي"} — {fmt(p.amount)} دج
-                  </span>
-                  <span className="text-xs text-gray-500">{p.method}</span>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                      p.status === "VERIFIED"
-                        ? "bg-success/15 text-success"
-                        : p.status === "REJECTED"
-                        ? "bg-red-500/15 text-red-300"
-                        : "bg-warning/15 text-warning"
-                    }`}
-                  >
-                    {p.status === "VERIFIED" ? "موثّق" : p.status === "REJECTED" ? "مرفوض" : "قيد المراجعة"}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        <div className="mt-6">
-          <h3 className="mb-3 flex items-center gap-2 text-sm font-semibold text-gray-300">
-            <Receipt size={16} className="text-accent" />
-            صورة وصل العربون
-          </h3>
-          {receiptLoading ? (
-            <div className="flex h-40 items-center justify-center rounded-lg bg-white/5">
-              <Loader2 className="animate-spin text-accent" size={24} />
-            </div>
-          ) : receiptUrl ? (
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
-              <img src={receiptUrl} alt="وصل العربون" className="max-h-80 rounded-lg border border-white/10 object-contain" />
-              <div className="flex flex-col gap-2">
-                <a href={receiptUrl} target="_blank" rel="noreferrer" className="flex items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-sm text-gray-300 hover:bg-white/5">
-                  <Download size={16} />
-                  فتح / تنزيل
-                </a>
-                <button onClick={() => setShowReplace(true)} className="flex items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-sm text-gray-300 hover:bg-white/5">
-                  <Upload size={16} />
-                  استبدال الصورة
-                </button>
+            <div className="flex flex-col gap-4 sm:flex-row">
+              <div className="sm:w-64 sm:shrink-0">
+                {receiptLoading ? (
+                  <div className="flex h-40 items-center justify-center rounded-lg bg-white/5">
+                    <Loader2 className="animate-spin text-accent" size={24} />
+                  </div>
+                ) : receiptUrl ? (
+                  <a href={receiptUrl} target="_blank" rel="noreferrer">
+                    <img src={receiptUrl} alt="وصل العربون" className="max-h-56 rounded-lg border border-white/10 object-contain" />
+                  </a>
+                ) : (
+                  <p className="rounded-lg bg-white/5 px-3 py-2 text-xs text-gray-400">لا توجد صورة وصل مرفوعة.</p>
+                )}
               </div>
-            </div>
-          ) : (
-            <p className="rounded-lg bg-white/5 px-4 py-3 text-sm text-gray-400">
-              لا توجد صورة وصل مرفوعة لهذا الحجز.
-            </p>
-          )}
-        </div>
-
-        {canSetDeposit && depositPayment && (
-          <div className="mt-6 rounded-lg border border-warning/30 bg-warning/5 p-4">
-            <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-warning">
-              <Banknote size={16} />
-              مبلغ العربون في الوصل
-            </h3>
-            <p className="mb-3 text-xs text-gray-400">
-              المحسوب آلياً: {fmt(booking.deposit_required)} دج — عدّله ليطابق المبلغ المدفوع فعلياً في الوصل قبل الاعتماد.
-            </p>
-            <div className="flex flex-wrap items-center gap-3">
-              <input
-                type="number"
-                min={0}
-                value={depAmount}
-                onChange={(e) => setDepAmount(e.target.value)}
-                className="w-40 rounded-lg border border-white/10 bg-white/5 p-2.5 text-sm outline-none focus:border-accent"
-              />
-              <span className="text-xs text-gray-500">دج</span>
-              <button
-                onClick={saveDepositAmount}
-                disabled={savingDep || !(Number(depAmount) > 0)}
-                className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-gray-900 hover:bg-accent/90 disabled:opacity-50"
-              >
-                {savingDep ? "جاري الحفظ…" : "حفظ المبلغ"}
-              </button>
+              <div className="flex-1">
+                {canSetDeposit && depositPayment && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs text-gray-400">مبلغ العربون كما في الوصل:</span>
+                    <input
+                      type="number"
+                      min={0}
+                      value={depAmount}
+                      onChange={(e) => setDepAmount(e.target.value)}
+                      className="w-32 rounded-lg border border-white/10 bg-white/5 p-2 text-sm outline-none focus:border-accent"
+                    />
+                    <span className="text-xs text-gray-500">دج</span>
+                    <button
+                      onClick={saveDepositAmount}
+                      disabled={savingDep || !(Number(depAmount) > 0)}
+                      className="rounded-lg border border-white/15 px-3 py-1.5 text-xs text-gray-300 hover:bg-white/5 disabled:opacity-50"
+                    >
+                      {savingDep ? "جاري الحفظ..." : "تحديث"}
+                    </button>
+                  </div>
+                )}
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {isAllowed("ACCEPT_REQUEST") && (
+                    <Action onClick={acceptRequest} icon={<ThumbsUp size={18} />} disabled={acting === "verify-payment"}>
+                      {actionLabel("ACCEPT_REQUEST")}
+                    </Action>
+                  )}
+                  {isAllowed("REJECT_AND_DELETE") && (
+                    <Action onClick={() => setShowReject(true)} icon={<ThumbsDown size={18} />} ghost disabled={acting === "reject-and-delete"}>
+                      {actionLabel("REJECT_AND_DELETE")}
+                    </Action>
+                  )}
+                </div>
+                {receiptUrl && (
+                  <button onClick={() => setShowReplace(true)} className="mt-3 flex items-center gap-1 text-xs text-gray-500 hover:text-gray-300">
+                    <Upload size={12} />
+                    استبدال الصورة
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         )}
 
         {canRecordBalance && (
-          <div className="mt-6 rounded-lg border border-info/30 bg-info/5 p-4">
-            <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-info">
-              <Banknote size={16} />
-              {actionLabel("RECORD_BALANCE")}
-            </h3>
-            <p className="mb-3 text-xs text-gray-400">
-              المتبقي حالياً: {fmt(booking.remaining_amount)} دج — أدخل المبلغ الذي دفعه العميل نقداً الآن (يمكن دفعه على أقساط).
-            </p>
-            <div className="flex flex-wrap items-center gap-3">
-              <input
-                type="number"
-                min={1}
-                max={booking.remaining_amount}
-                value={balancePaid}
-                onChange={(e) => setBalancePaid(e.target.value)}
-                className="w-40 rounded-lg border border-white/10 bg-white/5 p-2.5 text-sm outline-none focus:border-accent"
-              />
-              <span className="text-xs text-gray-500">دج</span>
-              <span className="rounded-lg bg-white/5 px-3 py-2 text-xs text-gray-300">
-                يتبقى بعد الدفع: {fmt(Math.max(0, booking.remaining_amount - (Number(balancePaid) || 0)))} دج
-              </span>
-              <button
-                onClick={recordBalance}
-                disabled={acting === "record-balance-payment" || !(Number(balancePaid) > 0)}
-                className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-gray-900 hover:bg-accent/90 disabled:opacity-50"
-              >
-                {acting === "record-balance-payment" ? "جاري التسجيل…" : "تسجيل الدفعة"}
-              </button>
-            </div>
+          <div className="mt-5 flex flex-wrap items-center gap-2 rounded-lg border border-info/30 bg-info/5 p-4">
+            <span className="text-sm text-gray-300">
+              دفعة نقدية الآن (المتبقي {fmt(booking.remaining_amount)} دج):
+            </span>
+            <input
+              type="number"
+              min={1}
+              max={booking.remaining_amount}
+              value={balancePaid}
+              onChange={(e) => setBalancePaid(e.target.value)}
+              className="w-32 rounded-lg border border-white/10 bg-white/5 p-2 text-sm outline-none focus:border-accent"
+            />
+            <span className="text-xs text-gray-500">دج</span>
+            <button
+              onClick={recordBalance}
+              disabled={acting === "record-balance-payment" || !(Number(balancePaid) > 0)}
+              className="rounded-lg border border-white/15 px-3 py-1.5 text-xs text-gray-300 hover:bg-white/5 disabled:opacity-50"
+            >
+              {acting === "record-balance-payment" ? "جاري التسجيل..." : "تسجيل"}
+            </button>
           </div>
         )}
 
-        {canAdjustPrice && (
-          <div className="mt-6 rounded-lg border border-info/30 bg-info/5 p-4">
-            <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-info">
-              <Banknote size={16} />
-              {actionLabel("ADJUST_PRICE")}
-            </h3>
-            <p className="mb-3 text-xs text-gray-400">
-              أدخل قيمة موجبة للزيادة أو سالبة للخصم (مثال: -500). يُحدَّث المتبقي تلقائياً.
-            </p>
-            <div className="flex flex-wrap items-center gap-3">
-              <input
-                type="number"
-                value={adjustAmount}
-                onChange={(e) => setAdjustAmount(e.target.value)}
-                placeholder="0"
-                className="w-36 rounded-lg border border-white/10 bg-white/5 p-2.5 text-sm outline-none focus:border-accent"
-              />
-              <span className="text-xs text-gray-500">دج</span>
-              <input
-                value={adjustReason}
-                onChange={(e) => setAdjustReason(e.target.value)}
-                placeholder="سبب التعديل"
-                className="w-56 rounded-lg border border-white/10 bg-white/5 p-2.5 text-sm outline-none focus:border-accent"
-              />
-              <button
-                onClick={savePriceAdjustment}
-                disabled={acting === "adjust-price" || !adjustAmount || Number(adjustAmount) === 0}
-                className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-gray-900 hover:bg-accent/90 disabled:opacity-50"
-              >
-                {acting === "adjust-price" ? "جاري الحفظ..." : "حفظ التعديل"}
-              </button>
-            </div>
-          </div>
-        )}
 
         {canRefund && (
-          <div className="mt-6 rounded-lg border border-warning/30 bg-warning/5 p-4">
-            <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-warning">
-              <RotateCcw size={16} />
-              {actionLabel("RECORD_REFUND")}
-            </h3>
-            <p className="mb-3 text-xs text-gray-400">
-              يُسجَّل كدفعة من نوع REFUND ولا يمكن أن يتجاوز مجموع المبالغ المحصَّلة فعلياً.
-            </p>
-            <div className="flex flex-wrap items-center gap-3">
-              <input
-                type="number"
-                min={1}
-                value={refundAmount}
-                onChange={(e) => setRefundAmount(e.target.value)}
-                placeholder="المبلغ"
-                className="w-36 rounded-lg border border-white/10 bg-white/5 p-2.5 text-sm outline-none focus:border-accent"
-              />
-              <span className="text-xs text-gray-500">دج</span>
-              <input
-                value={refundNote}
-                onChange={(e) => setRefundNote(e.target.value)}
-                placeholder="ملاحظة (اختياري)"
-                className="w-56 rounded-lg border border-white/10 bg-white/5 p-2.5 text-sm outline-none focus:border-accent"
-              />
-              <button
-                onClick={saveRefund}
-                disabled={acting === "record-refund" || !(Number(refundAmount) > 0)}
-                className="rounded-lg bg-accent px-4 py-2 text-sm font-medium text-gray-900 hover:bg-accent/90 disabled:opacity-50"
-              >
-                {acting === "record-refund" ? "جاري التسجيل..." : "تسجيل الاسترجاع"}
-              </button>
-            </div>
+          <div className="mt-5 flex flex-wrap items-center gap-2 rounded-lg border border-white/10 bg-white/5 p-4">
+            <span className="text-sm text-gray-300">رد مبلغ للعميل:</span>
+            <input
+              type="number"
+              min={1}
+              value={refundAmount}
+              onChange={(e) => setRefundAmount(e.target.value)}
+              placeholder="المبلغ"
+              className="w-32 rounded-lg border border-white/10 bg-white/5 p-2 text-sm outline-none focus:border-accent"
+            />
+            <span className="text-xs text-gray-500">دج</span>
+            <button
+              onClick={saveRefund}
+              disabled={acting === "record-refund" || !(Number(refundAmount) > 0)}
+              className="rounded-lg border border-white/15 px-3 py-1.5 text-xs text-gray-300 hover:bg-white/5 disabled:opacity-50"
+            >
+              {acting === "record-refund" ? "جاري التسجيل..." : "تسجيل"}
+            </button>
           </div>
         )}
 
 
-        <div className="mt-6">
-          {hint && (
-            <p className="mb-3 rounded-lg bg-white/5 px-4 py-3 text-sm text-gray-300">{hint}</p>
-          )}
-          {blocker && (
-            <p className="mb-3 rounded-lg bg-warning/15 px-4 py-3 text-sm text-warning">{blocker}</p>
-          )}
-          <div className="flex flex-wrap gap-3">
-            {isAllowed("ACCEPT_REQUEST") && (
-              <Action onClick={acceptRequest} icon={<ThumbsUp size={18} />} disabled={acting === "verify-payment"}>
-                {actionLabel("ACCEPT_REQUEST")}
-              </Action>
-            )}
-            {isAllowed("REJECT_AND_DELETE") && (
-              <Action onClick={() => setShowReject(true)} icon={<ThumbsDown size={18} />} ghost disabled={acting === "reject-and-delete"}>
-                {actionLabel("REJECT_AND_DELETE")}
-              </Action>
-            )}
-            {isAllowed("EDIT_DETAILS") && (
-              <Action onClick={() => setShowEdit(true)} icon={<StickyNote size={18} />} ghost disabled={acting === "update-details"}>
-                {actionLabel("EDIT_DETAILS")}
-              </Action>
-            )}
-            {isAllowed("HAND_OVER") && (
-              <Action onClick={() => invokeEdge("hand-over-equipment")} icon={<Truck size={18} />} disabled={acting === "hand-over-equipment"}>
-                {actionLabel("HAND_OVER")}
-              </Action>
-            )}
-            {isAllowed("START_RETURN") && (
-              <Action onClick={startReturn} icon={<RotateCcw size={18} />} ghost disabled={acting === "start_equipment_return"}>
-                {actionLabel("START_RETURN")}
-              </Action>
-            )}
-            {isAllowed("COMPLETE") && (
-              <Action onClick={() => invokeEdge("complete-booking")} icon={<CheckCircle2 size={18} />} disabled={acting === "complete-booking"}>
-                {actionLabel("COMPLETE")}
-              </Action>
-            )}
-            {isAllowed("MOVE_TO_TRASH") && (
-              <Action onClick={moveToTrash} icon={<Trash2 size={18} />} ghost disabled={acting === "soft-delete"}>
-                {actionLabel("MOVE_TO_TRASH")}
-              </Action>
-            )}
-            {isAllowed("PERMANENT_DELETE") && (
-              <Action onClick={() => setShowDelete(true)} icon={<Trash2 size={18} />} ghost disabled={acting === "permanent-delete"}>
-                {actionLabel("PERMANENT_DELETE")}
-              </Action>
-            )}
+        {isAllowed("HAND_OVER") && (
+          <div className="mt-5">
+            <Action onClick={() => invokeEdge("hand-over-equipment")} icon={<Truck size={18} />} disabled={acting === "hand-over-equipment"}>
+              {actionLabel("HAND_OVER")}
+            </Action>
           </div>
-        </div>
-        <div className="mt-6 rounded-xl border border-white/10 bg-white/5 p-4">
-          <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-gray-300">
-            <StickyNote size={16} className="text-accent" />
-            ملاحظة الأدمن
-          </h3>
-          <textarea
-            value={adminNote}
-            onChange={(e) => setAdminNote(e.target.value)}
-            placeholder="اكتب ملاحظة حول الحجز (للمتابعة الداخلية فقط)…"
-            rows={2}
-            className="w-full rounded-lg border border-white/10 bg-white/5 p-3 text-sm outline-none focus:border-accent"
-          />
-          <button
-            onClick={saveAdminNote}
-            disabled={savingNote}
-            className="mt-2 flex items-center gap-2 rounded-lg border border-white/15 px-4 py-2 text-sm text-gray-300 hover:bg-white/5 disabled:opacity-50"
-          >
-            {savingNote ? "جاري الحفظ…" : "حفظ الملاحظة"}
+        )}
+
+        {isAllowed("START_RETURN") && (
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <Action onClick={() => navigate(`/admin/returns/${bookingId}`)} icon={<RotateCcw size={18} />}>
+              تسجيل الإرجاع
+            </Action>
+            <span className="text-xs text-gray-500">خارج المخزون الآن: {outsideQuantity} وحدة</span>
+          </div>
+        )}
+
+        {isAllowed("COMPLETE") && (
+          <div className="mt-5">
+            <Action
+              onClick={() => invokeEdge("complete-booking")}
+              icon={<CheckCircle2 size={18} />}
+              disabled={acting === "complete-booking" || Boolean(blocker)}
+            >
+              {actionLabel("COMPLETE")}
+            </Action>
+          </div>
+        )}
+
+        <div className="mt-5 border-t border-white/5 pt-3">
+          <button onClick={() => setShowMore((s) => !s)} className="text-xs text-gray-500 hover:text-gray-300">
+            {showMore ? "إخفاء الخيارات ▲" : "المزيد من الخيارات ▼"}
           </button>
+          {showMore && (
+            <div className="mt-3 space-y-4">
+              {payments.length > 0 && (
+                <div>
+                  <p className="mb-2 text-xs font-semibold text-gray-400">المدفوعات</p>
+                  <div className="space-y-1.5">
+                    {payments.map((p) => (
+                      <div
+                        key={p.id}
+                        className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white/5 px-3 py-2 text-xs"
+                      >
+                        <span className="text-gray-300">
+                          {p.type === "DEPOSIT" ? "عربون" : p.type === "BALANCE" ? "رصيد" : p.type === "REFUND" ? "استرجاع" : "إضافي"} — {fmt(p.amount)} دج
+                        </span>
+                        <span
+                          className={`rounded-full px-2 py-0.5 ${
+                            p.status === "VERIFIED"
+                              ? "bg-success/15 text-success"
+                              : p.status === "REJECTED"
+                              ? "bg-red-500/15 text-red-300"
+                              : "bg-warning/15 text-warning"
+                          }`}
+                        >
+                          {p.status === "VERIFIED" ? "موثّق" : p.status === "REJECTED" ? "مرفوض" : "قيد المراجعة"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {!(canSetDeposit || isAllowed("REJECT_AND_DELETE")) && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs font-semibold text-gray-400">وصل العربون:</span>
+                  {receiptLoading ? (
+                    <Loader2 size={14} className="animate-spin text-gray-500" />
+                  ) : receiptUrl ? (
+                    <>
+                      <a href={receiptUrl} target="_blank" rel="noreferrer" className="text-xs text-gray-300 underline hover:text-white">
+                        فتح / تنزيل
+                      </a>
+                      <button onClick={() => setShowReplace(true)} className="text-xs text-gray-300 underline hover:text-white">
+                        استبدال الصورة
+                      </button>
+                    </>
+                  ) : (
+                    <span className="text-xs text-gray-500">لا توجد صورة</span>
+                  )}
+                </div>
+              )}
+
+              <div className="flex flex-wrap gap-2">
+                {isAllowed("EDIT_DETAILS") && (
+                  <Action onClick={() => setShowEdit(true)} icon={<StickyNote size={16} />} ghost disabled={acting === "update-details"}>
+                    {actionLabel("EDIT_DETAILS")}
+                  </Action>
+                )}
+                {isAllowed("MOVE_TO_TRASH") && (
+                  <Action onClick={moveToTrash} icon={<Trash2 size={16} />} ghost disabled={acting === "soft-delete"}>
+                    {actionLabel("MOVE_TO_TRASH")}
+                  </Action>
+                )}
+                {isAllowed("PERMANENT_DELETE") && (
+                  <Action onClick={() => setShowDelete(true)} icon={<Trash2 size={16} />} ghost disabled={acting === "permanent-delete"}>
+                    {actionLabel("PERMANENT_DELETE")}
+                  </Action>
+                )}
+              </div>
+
+              {canAdjustPrice && (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-xs text-gray-400">تعديل السعر (موجب للزيادة / سالب للخصم):</span>
+                  <input
+                    type="number"
+                    value={adjustAmount}
+                    onChange={(e) => setAdjustAmount(e.target.value)}
+                    placeholder="0"
+                    className="w-28 rounded-lg border border-white/10 bg-white/5 p-2 text-xs outline-none focus:border-accent"
+                  />
+                  <span className="text-xs text-gray-500">دج</span>
+                  <input
+                    value={adjustReason}
+                    onChange={(e) => setAdjustReason(e.target.value)}
+                    placeholder="السبب"
+                    className="w-44 rounded-lg border border-white/10 bg-white/5 p-2 text-xs outline-none focus:border-accent"
+                  />
+                  <button
+                    onClick={savePriceAdjustment}
+                    disabled={acting === "adjust-price" || !adjustAmount || Number(adjustAmount) === 0}
+                    className="rounded-lg border border-white/15 px-3 py-1.5 text-xs text-gray-300 hover:bg-white/5 disabled:opacity-50"
+                  >
+                    {acting === "adjust-price" ? "جاري الحفظ..." : "حفظ"}
+                  </button>
+                </div>
+              )}
+
+              <div>
+                <p className="mb-1 text-xs font-semibold text-gray-400">ملاحظة الأدمن (داخلية)</p>
+                <textarea
+                  value={adminNote}
+                  onChange={(e) => setAdminNote(e.target.value)}
+                  placeholder="ملاحظة داخلية فقط..."
+                  rows={2}
+                  className="w-full rounded-lg border border-white/10 bg-white/5 p-2 text-xs outline-none focus:border-accent"
+                />
+                <button
+                  onClick={saveAdminNote}
+                  disabled={savingNote}
+                  className="mt-1 rounded-lg border border-white/15 px-3 py-1.5 text-xs text-gray-300 hover:bg-white/5 disabled:opacity-50"
+                >
+                  {savingNote ? "جاري الحفظ..." : "حفظ الملاحظة"}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
       </div>
@@ -925,18 +930,6 @@ export default function BookingDetail() {
       )}
 
     </AdminLayout>
-  );
-}
-
-function Info({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
-  return (
-    <div className="flex items-center gap-3 rounded-lg bg-white/5 p-3">
-      <span className="text-accent">{icon}</span>
-      <div>
-        <p className="text-xs text-gray-500">{label}</p>
-        <p className="font-medium">{value}</p>
-      </div>
-    </div>
   );
 }
 
