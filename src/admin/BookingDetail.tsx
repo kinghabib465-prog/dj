@@ -291,7 +291,7 @@ export default function BookingDetail() {
     });
     setActing(null);
     if (error) {
-      setMsg({ type: "err", text: "تعذر قبول الطلب" });
+      setMsg({ type: "err", text: `تعذر قبول الطلب: ${error.message}` });
       return;
     }
     setMsg({ type: "ok", text: "تم قبول الطلب" });
@@ -316,9 +316,9 @@ export default function BookingDetail() {
       setShowReject(false);
       setMsg({ type: "ok", text: "تم رفض الطلب وحذفه" });
       setTimeout(() => navigate("/admin/bookings"), 700);
-    } catch {
+    } catch (e) {
       setActing(null);
-      setMsg({ type: "err", text: "تعذر رفض الطلب" });
+      setMsg({ type: "err", text: `تعذر رفض الطلب: ${(e as Error)?.message ?? ""}` });
     }
   };
 
@@ -339,9 +339,9 @@ export default function BookingDetail() {
       setShowEdit(false);
       setMsg({ type: "ok", text: "تم تحديث بيانات الطلب" });
       setTimeout(() => window.location.reload(), 800);
-    } catch {
+    } catch (e) {
       setActing(null);
-      setMsg({ type: "err", text: "تعذر تحديث البيانات" });
+      setMsg({ type: "err", text: `تعذر تحديث البيانات: ${(e as Error)?.message ?? ""}` });
     }
   };
 
@@ -361,9 +361,9 @@ export default function BookingDetail() {
       setAdjustReason("");
       setMsg({ type: "ok", text: "تم تعديل المبلغ" });
       setTimeout(() => window.location.reload(), 800);
-    } catch {
+    } catch (e) {
       setActing(null);
-      setMsg({ type: "err", text: "تعذر تعديل المبلغ" });
+      setMsg({ type: "err", text: `تعذر تعديل المبلغ: ${(e as Error)?.message ?? ""}` });
     }
   };
 
@@ -384,9 +384,9 @@ export default function BookingDetail() {
       setRefundNote("");
       setMsg({ type: "ok", text: "تم تسجيل الاسترجاع" });
       setTimeout(() => window.location.reload(), 800);
-    } catch {
+    } catch (e) {
       setActing(null);
-      setMsg({ type: "err", text: "تعذر تسجيل الاسترجاع" });
+      setMsg({ type: "err", text: `تعذر تسجيل الاسترجاع: ${(e as Error)?.message ?? ""}` });
     }
   };
 

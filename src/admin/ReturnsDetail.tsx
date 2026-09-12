@@ -28,7 +28,12 @@ export default function ReturnsDetail() {
       if (error) { setMsg({ type: "err", text: "تعذر تحميل عناصر الإرجاع" }); setLoading(false); return; }
       // جلسة الإرجاع غير مبدوءة بعد — يبدأ تلقائياً ليتم الإرجاع في أي وقت (قبل أو بعد الموعد المتوقع)
       if (!error && (!data || data.length === 0)) {
-        await supabase.rpc("start_equipment_return", { p_booking_id: bookingId });
+        const { error: startErr } = await supabase.rpc("start_equipment_return", { p_booking_id: bookingId });
+        if (startErr) {
+          setMsg({ type: "err", text: `تعذر بدء جلسة الإرجاع: ${startErr.message}` });
+          setLoading(false);
+          return;
+        }
         const ref = await supabase.rpc("get_return_items_for_booking", { p_booking_id: bookingId });
         data = ref.data;
         error = ref.error;
@@ -40,12 +45,33 @@ export default function ReturnsDetail() {
   }, [bookingId]);
 
   const handleChange = (index: number, field: keyof ReturnItem, value: number) => {
-    setItems(prev => prev.map((it, i) => i === index ? { ...it, [field]: Math.max(0, value) } : it));
+    setItems(prev =>
+      prev.map((it, i) => {
+        if (i !== index) return it;
+        const next = { ...it, [field]: Math.max(0, value) };
+        // إعادة حساب المتبقي في الخارج دائماً: المتوقع - (سليم + تالف + مفقود)
+        const accounted =
+          next.returned_good_quantity + next.damaged_quantity + next.missing_quantity;
+        next.remaining_out_quantity = Math.max(0, next.expected_quantity - accounted);
+        return next;
+      }),
+    );
   };
 
   const handleSave = async () => {
     setSaving(true);
     setMsg(null);
+    // تحقق مسبق: المجموع المحسوب (سليم + تالف + مفقود) لا يتجاوز المتوقع
+    const bad = items.find(
+      (it) =>
+        it.returned_good_quantity + it.damaged_quantity + it.missing_quantity >
+        it.expected_quantity,
+    );
+    if (bad) {
+      setMsg({ type: "err", text: `مجموع (سليم + تالف + مفقود) لـ «${bad.equipment_name}» يتجاوز الكمية المتوقعة` });
+      setSaving(false);
+      return;
+    }
     for (const item of items) {
       const { error } = await supabase.rpc("upsert_return_item", {
         p_return_item_id: item.id,
@@ -54,9 +80,21 @@ export default function ReturnsDetail() {
         p_missing_quantity: item.missing_quantity,
         p_remaining_out_quantity: item.remaining_out_quantity,
       });
-      if (error) { setMsg({ type: "err", text: "فشل حفظ بعض العناصر" }); setSaving(false); return; }
+      if (error) {
+        setMsg({ type: "err", text: `فشل حفظ بعض العناصر: ${error.message}` });
+        setSaving(false);
+        return;
+      }
     }
+    // يعلّم جلسة الإرجاع كمكتملة فقط إذا لم يبق شيء خارجاً ولا مفقوداً
     await supabase.rpc("maybe_complete_return", { p_booking_id: bookingId });
+    const stillOut = items.reduce((s, it) => s + it.remaining_out_quantity, 0);
+    const stillMissing = items.reduce((s, it) => s + it.missing_quantity, 0);
+    if (stillOut > 0 || stillMissing > 0) {
+      setMsg({ type: "ok", text: `تم الحفظ. بقي ${stillOut} وحدة خارجاً و ${stillMissing} مفقودة — لن يُغلق الإرجاع حتى تسوية الكميات.` });
+      setSaving(false);
+      return;
+    }
     setMsg({ type: "ok", text: "تم الحفظ بنجاح" });
     setSaving(false);
     setTimeout(() => navigate("/admin/returns"), 900);
