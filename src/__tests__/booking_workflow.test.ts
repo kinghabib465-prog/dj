@@ -95,6 +95,12 @@ describe("getAllowedActions", () => {
     expect(getAllowedActions("CONFIRMED", { remainingAmount: 0 })).not.toContain("RECORD_BALANCE");
   });
 
+  it("outstanding balance stays collectable during and after the return", () => {
+    expect(getAllowedActions("RETURN_PENDING", { remainingAmount: 3000 })).toContain("RECORD_BALANCE");
+    expect(getAllowedActions("COMPLETED", { remainingAmount: 3000 })).toContain("RECORD_BALANCE");
+    expect(getAllowedActions("COMPLETED", { remainingAmount: 0 })).not.toContain("RECORD_BALANCE");
+  });
+
   it("ready for pickup allows hand over even with outstanding balance (warning only)", () => {
     const actions = getAllowedActions("READY_FOR_PICKUP", { remainingAmount: 3000 });
     expect(actions).toContain("HAND_OVER");

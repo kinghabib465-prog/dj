@@ -68,10 +68,10 @@ Deno.serve(async (req) => {
     );
   }
 
-  if (booking.status !== "CONFIRMED") {
+  if (!["CONFIRMED", "READY_FOR_PICKUP", "RETURN_PENDING", "COMPLETED"].includes(booking.status)) {
     return new Response(
       JSON.stringify({
-        error: "Booking not CONFIRMED",
+        error: "Booking not in a payable status",
         currentStatus: booking?.status,
         bookingId,
       }),

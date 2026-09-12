@@ -95,7 +95,7 @@ export default function ReturnsDetail() {
       setSaving(false);
       return;
     }
-    setMsg({ type: "ok", text: "تم الحفظ بنجاح" });
+    setMsg({ type: "ok", text: "تم الحفظ بنجاح — عادت المعدات للمخزون" });
     setSaving(false);
     setTimeout(() => navigate("/admin/returns"), 900);
   };

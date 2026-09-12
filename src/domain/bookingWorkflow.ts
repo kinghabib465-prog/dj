@@ -151,8 +151,8 @@ const n = (v: number | undefined): number => (Number.isFinite(v as number) ? (v 
  *  - ACCEPT / REJECT_AND_DELETE only for a new request that has a deposit row.
  *  - EDIT_DETAILS allowed while the request is under review and while a
  *    confirmed booking is still inside the warehouse (never after handover).
- *  - RECORD_BALANCE only before handover (the cash is taken at handover or
- *    during confirmation), never after the equipment is out.
+ *  - RECORD_BALANCE while money is still owed: before handover, at return
+ *    time, or after completion — so the balance never becomes uncollectable.
  *  - HAND_OVER only from READY_FOR_PICKUP. An outstanding balance is allowed
  *    and recorded, but is surfaced as a warning.
  *  - START_RETURN only while equipment is out.
@@ -183,7 +183,13 @@ export function getAllowedActions(status: string, flags: BookingFlags = {}): Boo
     actions.push("EDIT_DETAILS");
   }
 
-  if ((status === "CONFIRMED" || status === "READY_FOR_PICKUP") && remaining > 0) {
+  if (
+    (status === "CONFIRMED" ||
+      status === "READY_FOR_PICKUP" ||
+      status === "RETURN_PENDING" ||
+      status === "COMPLETED") &&
+    remaining > 0
+  ) {
     actions.push("RECORD_BALANCE");
   }
 
@@ -250,7 +256,9 @@ export function getNextStepHint(status: string, flags: BookingFlags = {}): strin
     case "RETURN_PENDING":
       return (
         blockingReason(status, flags) ??
-        "تم إرجاع كل المعدات — أكمل الحجز."
+        (n(flags.remainingAmount) > 0
+          ? "تم إرجاع كل المعدات — سجّل الرصيد المتبقي إن وجد."
+          : "")
       );
     case "COMPLETED":
       return "اكتمل الحجز.";

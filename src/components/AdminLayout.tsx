@@ -3,7 +3,6 @@ import { NavLink, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
   ClipboardList,
-  Package,
   Truck,
   ArrowLeftFromLine,
   CalendarDays,
@@ -18,7 +17,6 @@ import { supabase } from "../lib/supabase";
 const navItems = [
   { to: "/admin/dashboard", label: "لوحة التحكم", icon: LayoutDashboard },
   { to: "/admin/bookings", label: "الحجوزات", icon: ClipboardList },
-  { to: "/admin/returns", label: "المعدات الخارجة", icon: Package },
   { to: "/admin/equipment-inside", label: "داخل المتجر", icon: Truck },
   { to: "/admin/equipment-outside", label: "خارج المتجر", icon: ArrowLeftFromLine },
   { to: "/admin/calendar", label: "التقويم", icon: CalendarDays },

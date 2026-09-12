@@ -90,7 +90,7 @@ export default function AdminDashboard() {
           value: returns.count ?? 0,
           icon: <AlertCircle size={24} />,
           color: "text-purple-400",
-          to: "/admin/returns",
+          to: "/admin/bookings",
         },
       ]);
       setLoading(false);
@@ -156,12 +156,6 @@ export default function AdminDashboard() {
       </div>
 
       <div className="mt-8 grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <QuickLink
-          to="/admin/returns"
-          title="المعدات الخارجة"
-          desc="عرض الحجوزات النشطة وتسجيل الإرجاع"
-          icon={<Package size={28} className="text-accent" />}
-        />
         <QuickLink
           to="/admin/equipment-inside"
           title="مخزون المتجر"
